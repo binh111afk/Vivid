@@ -96,6 +96,12 @@ export default function App() {
   const [showInvitePopup, setShowInvitePopup] = useState(false);
 
   const latestPhoto = friends[0];
+  const deviceFrameStyle = {
+    background: 'var(--tet-cream)',
+    width: 'min(390px, calc(100vw - 1rem), calc((100dvh - 1rem) * 390 / 844))',
+    maxHeight: 'calc(100dvh - 1rem)',
+    aspectRatio: '390 / 844',
+  } as const;
 
   const handleCapture = (imageData: string) => {
     setCapturedImage(imageData);
@@ -126,14 +132,20 @@ export default function App() {
   }, []);
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--tet-cream)' }}>
+    <div
+      className="relative flex min-h-dvh items-center justify-center overflow-hidden p-2 sm:p-4"
+      style={{ background: 'var(--tet-cream)' }}
+    >
       {/* Decorative cherry blossoms */}
       <CherryBlossom style={{ position: 'absolute', top: '2rem', left: '1rem', opacity: 0.15 }} />
       <CherryBlossom style={{ position: 'absolute', top: '3rem', right: '2rem', opacity: 0.1, transform: 'scale(0.8) rotate(45deg)' }} />
       <CherryBlossom style={{ position: 'absolute', bottom: '8rem', left: '3rem', opacity: 0.12, transform: 'scale(0.6) rotate(-30deg)' }} />
 
       {/* Mobile container */}
-      <div className="relative w-full max-w-[390px] h-[844px] rounded-[2.5rem] overflow-hidden shadow-2xl" style={{ background: 'var(--tet-cream)' }}>
+      <div
+        className="relative overflow-hidden rounded-[2.5rem] shadow-2xl"
+        style={deviceFrameStyle}
+      >
         {/* Red pattern background */}
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: `radial-gradient(circle, var(--tet-red) 1px, transparent 1px)`,
@@ -267,7 +279,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -100 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="fixed top-8 left-1/2 -translate-x-1/2 px-6 py-4 rounded-full shadow-2xl z-50"
+            className="fixed left-1/2 top-4 z-50 max-w-[calc(100vw-1rem)] -translate-x-1/2 rounded-full px-4 py-3 shadow-2xl sm:top-8 sm:px-6 sm:py-4"
             style={{
               background: 'var(--tet-red)',
               border: '2px solid var(--tet-gold)',
@@ -287,15 +299,15 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
             style={{ background: 'rgba(0, 0, 0, 0.8)' }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-[390px] h-[844px] rounded-[2.5rem] overflow-hidden shadow-2xl"
-              style={{ background: 'var(--tet-cream)' }}
+              className="overflow-hidden rounded-[2.5rem] shadow-2xl"
+              style={deviceFrameStyle}
             >
               <CameraScreen
                 capturedImage={capturedImage}
@@ -323,7 +335,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
             style={{ background: 'rgba(0, 0, 0, 0.6)' }}
             onClick={() => setShowInvitePopup(false)}
           >
