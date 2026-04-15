@@ -369,7 +369,7 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
   const activePhoto = photos.find((item: any) => item.id === activePhotoId) ?? photos[0];
   const liked = likedPhotoIds.includes(activePhoto.id);
   const actionBoxHeight = 92;
-  const actionBoxBottomOffset = 50;
+  const actionBoxBottomOffset = 30;
   const cardToActionGap = -34;
   const scrollViewportBottom = actionBoxHeight + actionBoxBottomOffset + cardToActionGap;
 

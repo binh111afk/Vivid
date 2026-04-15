@@ -1,7 +1,7 @@
 
 import { createRoot } from "react-dom/client";
 import App from "./app/App.tsx";
-import { AuthProvider } from "./app/components/UserAuth.jsx";
+import { AuthProvider } from "./app/components/AuthForm.jsx";
 import "./styles/index.css";
 import { registerSW } from "virtual:pwa-register";
 
