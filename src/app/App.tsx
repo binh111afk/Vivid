@@ -289,6 +289,15 @@ export default function App() {
     );
   };
 
+  const toggleAllRecipients = () => {
+    setSelectedRecipients((prev) => {
+      const allRecipientIds = friends.map((friend: any) => friend.id);
+      const isAllSelected = allRecipientIds.length > 0 && allRecipientIds.every((id: number) => prev.includes(id));
+
+      return isAllSelected ? [] : allRecipientIds;
+    });
+  };
+
   const toggleHomeLike = (id: number) => {
     setLikedPhotoIds((prev) =>
       prev.includes(id) ? prev.filter((photoId) => photoId !== id) : [...prev, id]
@@ -553,6 +562,7 @@ export default function App() {
                   friends={friends}
                   selectedRecipients={selectedRecipients}
                   onToggleRecipient={toggleRecipient}
+                  onToggleAllRecipients={toggleAllRecipients}
                   caption={caption}
                   onCaptionChange={setCaption}
                   onBack={() => {
@@ -828,11 +838,12 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
   );
 }
 
-function CameraScreen({ capturedImage, onCapture, onSend, isSendingPost, friends, selectedRecipients, onToggleRecipient, caption, onCaptionChange, onBack }: any) {
+function CameraScreen({ capturedImage, onCapture, onSend, isSendingPost, friends, selectedRecipients, onToggleRecipient, onToggleAllRecipients, caption, onCaptionChange, onBack }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState(false);
+  const allSelected = friends.length > 0 && friends.every((friend: any) => selectedRecipients.includes(friend.id));
 
   useEffect(() => {
     let mounted = true;
@@ -978,6 +989,27 @@ function CameraScreen({ capturedImage, onCapture, onSend, isSendingPost, friends
 
       {/* Recipient selector */}
       <div className="flex gap-3 overflow-x-auto pb-4 mb-4">
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={onToggleAllRecipients}
+          className="flex-shrink-0 relative"
+        >
+          <div
+            className="w-14 h-14 rounded-full overflow-hidden transition-all flex items-center justify-center"
+            style={{
+              border: allSelected
+                ? '3px solid var(--tet-red)'
+                : '2px solid var(--tet-gold)',
+              opacity: allSelected ? 1 : 0.6,
+              background: allSelected ? 'var(--tet-red)' : 'white',
+              color: allSelected ? 'var(--tet-cream)' : 'var(--tet-red)'
+            }}
+          >
+            <Check size={20} />
+          </div>
+          <p className="text-xs mt-1 text-center" style={{ color: 'var(--tet-black)' }}>Tất cả</p>
+        </motion.button>
+
         {friends.map((friend: any) => (
           <motion.button
             key={friend.id}
