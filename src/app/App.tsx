@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Home, Camera, Users, Heart, History, TrendingUp, Lock, Globe, X, Copy, Check } from 'lucide-react';
 import UserAuth from './components/UserAuth.jsx';
 import AuthPage, { useAuth } from './components/AuthPage.jsx';
+import AccountPage from './components/AccountPage.jsx';
 
 // Mock data
 const friends = [
@@ -136,7 +137,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'history' | 'summary' | 'friends'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'history' | 'summary' | 'friends' | 'account'>('home');
   const [showNotification, setShowNotification] = useState(false);
   const [likedPhotoIds, setLikedPhotoIds] = useState<number[]>([]);
   const [historyFilter, setHistoryFilter] = useState<'day' | 'week' | 'month'>('day');
@@ -224,7 +225,7 @@ export default function App() {
               </div>
               <div className="flex items-center gap-3">
                 <Lantern />
-                <UserAuth />
+                <UserAuth onOpenAccount={() => setActiveTab('account')} />
               </div>
             </header>
 
@@ -293,6 +294,17 @@ export default function App() {
                     className="h-full"
                   >
                     <FriendsScreen friends={friends} onInvite={() => setShowInvitePopup(true)} />
+                  </motion.div>
+                )}
+                {activeTab === 'account' && (
+                  <motion.div
+                    key="account"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="h-full"
+                  >
+                    <AccountPage onBack={() => setActiveTab('home')} />
                   </motion.div>
                 )}
               </AnimatePresence>
