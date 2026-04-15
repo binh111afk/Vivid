@@ -10,6 +10,8 @@ const AuthContext = createContext({
   isLoading: true,
   login: async () => {},
   register: async () => {},
+  updateProfile: async () => {},
+  changePassword: async () => {},
   logout: () => {},
 });
 
@@ -131,6 +133,26 @@ export function AuthProvider({ children }) {
     return payload.user;
   };
 
+  const updateProfile = async ({ username, displayName, avatar }) => {
+    const payload = await requestAuth("/api/profile", { username, displayName, avatar });
+
+    persistUser(payload.user);
+    setUser(payload.user);
+    console.log("[Auth] Profile updated successfully", payload.user);
+    return payload.user;
+  };
+
+  const changePassword = async ({ username, currentPassword, newPassword }) => {
+    const payload = await requestAuth("/api/change-password", {
+      username,
+      currentPassword,
+      newPassword,
+    });
+
+    console.log("[Auth] Password changed successfully", payload);
+    return payload;
+  };
+
   const logout = () => {
     console.log("[Auth] Logging out current user");
     persistUser(null);
@@ -144,6 +166,8 @@ export function AuthProvider({ children }) {
       isLoading,
       login,
       register,
+      updateProfile,
+      changePassword,
       logout,
     }),
     [user, isLoading],
