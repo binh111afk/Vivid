@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Home, Camera, Users, Heart, History, TrendingUp, Lock, Globe, X, Copy, Check } from 'lucide-react';
 import UserAuth from './components/UserAuth.jsx';
+import AuthPage, { useAuth } from './components/AuthPage.jsx';
 
 // Mock data
 const friends = [
@@ -82,6 +83,58 @@ const summaries = [
   },
 ];
 
+function AuthGate() {
+  return (
+    <div
+      className="theme-vivid relative flex min-h-dvh items-center justify-center overflow-hidden p-4"
+      style={{ background: 'var(--tet-cream)' }}
+    >
+      <CherryBlossom style={{ position: 'absolute', top: '2rem', left: '1rem', opacity: 0.15 }} />
+      <CherryBlossom style={{ position: 'absolute', top: '3rem', right: '2rem', opacity: 0.1, transform: 'scale(0.8) rotate(45deg)' }} />
+      <CherryBlossom style={{ position: 'absolute', bottom: '8rem', left: '3rem', opacity: 0.12, transform: 'scale(0.6) rotate(-30deg)' }} />
+
+      <div className="relative z-10 w-full max-w-[24rem]">
+        <div className="mb-6 text-center">
+          <div className="mb-4 inline-flex items-center gap-3 rounded-full border border-[rgba(128,0,32,0.12)] bg-[rgba(255,253,208,0.38)] px-5 py-3 shadow-[0_18px_40px_rgba(128,0,32,0.12)] backdrop-blur-xl">
+            <VividLogo />
+            <span className="text-3xl font-semibold" style={{ color: 'var(--tet-red)', fontFamily: 'var(--font-display)' }}>
+              Vivid
+            </span>
+          </div>
+          <p className="mx-auto max-w-[20rem] text-sm leading-relaxed" style={{ color: 'rgba(54,24,18,0.72)' }}>
+            Đăng nhập hoặc tạo tài khoản để bước vào không gian lưu giữ những khoảnh khắc thân thương.
+          </p>
+        </div>
+
+        <AuthPage />
+      </div>
+    </div>
+  );
+}
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { isLoggedIn, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div
+        className="theme-vivid flex min-h-dvh items-center justify-center"
+        style={{ background: 'var(--tet-cream)' }}
+      >
+        <div className="rounded-full border border-[rgba(128,0,32,0.14)] bg-[rgba(255,253,208,0.42)] px-5 py-3 text-sm font-medium text-[#800020] shadow-[0_18px_45px_rgba(128,0,32,0.12)] backdrop-blur-xl">
+          Đang tải phiên làm việc...
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return <AuthGate />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'history' | 'summary' | 'friends'>('home');
   const [showNotification, setShowNotification] = useState(false);
@@ -140,238 +193,243 @@ export default function App() {
   }, []);
 
   return (
-    <div
-      className="theme-vivid relative flex min-h-dvh items-center justify-center overflow-hidden p-2 sm:p-4"
-      style={{ background: 'var(--tet-cream)' }}
-    >
-      {/* Decorative cherry blossoms */}
-      <CherryBlossom style={{ position: 'absolute', top: '2rem', left: '1rem', opacity: 0.15 }} />
-      <CherryBlossom style={{ position: 'absolute', top: '3rem', right: '2rem', opacity: 0.1, transform: 'scale(0.8) rotate(45deg)' }} />
-      <CherryBlossom style={{ position: 'absolute', bottom: '8rem', left: '3rem', opacity: 0.12, transform: 'scale(0.6) rotate(-30deg)' }} />
-
-      {/* Mobile container */}
+    <ProtectedRoute>
       <div
-        className="relative overflow-hidden rounded-[2.5rem] shadow-2xl"
-        style={deviceFrameStyle}
+        className="theme-vivid relative flex min-h-dvh items-center justify-center overflow-hidden p-2 sm:p-4"
+        style={{ background: 'var(--tet-cream)' }}
       >
-        {/* Red pattern background */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: `radial-gradient(circle, var(--tet-red) 1px, transparent 1px)`,
-          backgroundSize: '20px 20px'
-        }} />
+        {/* Decorative cherry blossoms */}
+        <CherryBlossom style={{ position: 'absolute', top: '2rem', left: '1rem', opacity: 0.15 }} />
+        <CherryBlossom style={{ position: 'absolute', top: '3rem', right: '2rem', opacity: 0.1, transform: 'scale(0.8) rotate(45deg)' }} />
+        <CherryBlossom style={{ position: 'absolute', bottom: '8rem', left: '3rem', opacity: 0.12, transform: 'scale(0.6) rotate(-30deg)' }} />
 
-        {/* Content */}
-        <div className="relative h-full flex flex-col">
-          {/* Header */}
-          <header className="px-6 pt-6 pb-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <VividLogo />
-              <h1 className="text-2xl" style={{ color: 'var(--tet-red)' }}>Vivid</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <Lantern />
-              <UserAuth />
-            </div>
-          </header>
+        {/* Mobile container */}
+        <div
+          className="relative overflow-hidden rounded-[2.5rem] shadow-2xl"
+          style={deviceFrameStyle}
+        >
+          {/* Red pattern background */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{
+            backgroundImage: `radial-gradient(circle, var(--tet-red) 1px, transparent 1px)`,
+            backgroundSize: '20px 20px'
+          }} />
 
-          {/* Main content area */}
-          <div className="flex-1 overflow-hidden">
-            <AnimatePresence mode="wait">
-              {activeTab === 'home' && (
-                <motion.div
-                  key="home"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="h-full"
-                >
-                  <HomeScreen
-                    photos={friends}
-                    activePhotoId={currentHomePhotoId}
-                    likedPhotoIds={likedPhotoIds}
-                    onActivePhotoChange={setCurrentHomePhotoId}
-                    onLike={toggleHomeLike}
-                    onCameraClick={() => setShowCamera(true)}
-                  />
-                </motion.div>
-              )}
-              {activeTab === 'history' && (
-                <motion.div
-                  key="history"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="h-full"
-                >
-                  <HistoryScreen
-                    photos={photoHistory}
-                    filter={historyFilter}
-                    onFilterChange={setHistoryFilter}
-                    friends={friends}
-                    selectedFriend={selectedFriend}
-                    onFriendChange={setSelectedFriend}
-                  />
-                </motion.div>
-              )}
-              {activeTab === 'summary' && (
-                <motion.div
-                  key="summary"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="h-full"
-                >
-                  <SummaryScreen
-                    summaries={summaries}
-                    filter={summaryFilter}
-                    onFilterChange={setSummaryFilter}
-                    view={summaryView}
-                    onViewChange={setSummaryView}
-                  />
-                </motion.div>
-              )}
-              {activeTab === 'friends' && (
-                <motion.div
-                  key="friends"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="h-full"
-                >
-                  <FriendsScreen friends={friends} onInvite={() => setShowInvitePopup(true)} />
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* Content */}
+          <div className="relative h-full flex flex-col">
+            {/* Header */}
+            <header className="px-6 pt-6 pb-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <VividLogo />
+                <h1 className="text-2xl" style={{ color: 'var(--tet-red)' }}>Vivid</h1>
+              </div>
+              <div className="flex items-center gap-3">
+                <Lantern />
+                <UserAuth />
+              </div>
+            </header>
+
+            {/* Main content area */}
+            <div className="flex-1 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {activeTab === 'home' && (
+                  <motion.div
+                    key="home"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="h-full"
+                  >
+                    <HomeScreen
+                      photos={friends}
+                      activePhotoId={currentHomePhotoId}
+                      likedPhotoIds={likedPhotoIds}
+                      onActivePhotoChange={setCurrentHomePhotoId}
+                      onLike={toggleHomeLike}
+                      onCameraClick={() => setShowCamera(true)}
+                    />
+                  </motion.div>
+                )}
+                {activeTab === 'history' && (
+                  <motion.div
+                    key="history"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="h-full"
+                  >
+                    <HistoryScreen
+                      photos={photoHistory}
+                      filter={historyFilter}
+                      onFilterChange={setHistoryFilter}
+                      friends={friends}
+                      selectedFriend={selectedFriend}
+                      onFriendChange={setSelectedFriend}
+                    />
+                  </motion.div>
+                )}
+                {activeTab === 'summary' && (
+                  <motion.div
+                    key="summary"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="h-full"
+                  >
+                    <SummaryScreen
+                      summaries={summaries}
+                      filter={summaryFilter}
+                      onFilterChange={setSummaryFilter}
+                      view={summaryView}
+                      onViewChange={setSummaryView}
+                    />
+                  </motion.div>
+                )}
+                {activeTab === 'friends' && (
+                  <motion.div
+                    key="friends"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="h-full"
+                  >
+                    <FriendsScreen friends={friends} onInvite={() => setShowInvitePopup(true)} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Bottom navigation */}
+            <nav className="relative z-10" style={{ background: 'var(--tet-deep-red)' }}>
+              <div className="flex items-center justify-around px-4 py-4">
+                <NavButton
+                  icon={<Home size={22} />}
+                  label="Trang chủ"
+                  active={activeTab === 'home'}
+                  onClick={() => setActiveTab('home')}
+                />
+                <NavButton
+                  icon={<History size={22} />}
+                  label="Lịch sử"
+                  active={activeTab === 'history'}
+                  onClick={() => setActiveTab('history')}
+                />
+                <NavButton
+                  icon={<TrendingUp size={22} />}
+                  label="Tổng kết"
+                  active={activeTab === 'summary'}
+                  onClick={() => setActiveTab('summary')}
+                />
+                <NavButton
+                  icon={<Users size={22} />}
+                  label="Bạn bè"
+                  active={activeTab === 'friends'}
+                  onClick={() => setActiveTab('friends')}
+                />
+              </div>
+            </nav>
           </div>
-
-          {/* Bottom navigation */}
-          <nav className="relative z-10" style={{ background: 'var(--tet-deep-red)' }}>
-            <div className="flex items-center justify-around px-4 py-4">
-              <NavButton
-                icon={<Home size={22} />}
-                label="Trang chủ"
-                active={activeTab === 'home'}
-                onClick={() => setActiveTab('home')}
-              />
-              <NavButton
-                icon={<History size={22} />}
-                label="Lịch sử"
-                active={activeTab === 'history'}
-                onClick={() => setActiveTab('history')}
-              />
-              <NavButton
-                icon={<TrendingUp size={22} />}
-                label="Tổng kết"
-                active={activeTab === 'summary'}
-                onClick={() => setActiveTab('summary')}
-              />
-              <NavButton
-                icon={<Users size={22} />}
-                label="Bạn bè"
-                active={activeTab === 'friends'}
-                onClick={() => setActiveTab('friends')}
-              />
-            </div>
-          </nav>
         </div>
-      </div>
 
-      {/* Notification toast */}
-      <AnimatePresence>
-        {showNotification && (
-          <motion.div
-            initial={{ opacity: 0, y: -100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -100 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="fixed left-1/2 top-4 z-50 max-w-[calc(100vw-1rem)] -translate-x-1/2 rounded-full px-4 py-3 shadow-2xl sm:top-8 sm:px-6 sm:py-4"
-            style={{
-              background: 'var(--tet-red)',
-              border: '2px solid var(--tet-gold)',
-              color: 'var(--tet-cream)',
-              maxWidth: '90%'
-            }}
-          >
-            <p className="text-center font-medium">{latestPhoto.name} vừa gửi ảnh cho bạn! 📸</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Camera modal */}
-      <AnimatePresence>
-        {showCamera && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
-            style={{ background: 'rgba(0, 0, 0, 0.8)' }}
-          >
+        {/* Notification toast */}
+        <AnimatePresence>
+          {showNotification && (
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="overflow-hidden rounded-[2.5rem] shadow-2xl"
-              style={deviceFrameStyle}
-            >
-              <CameraScreen
-                capturedImage={capturedImage}
-                onCapture={handleCapture}
-                onSend={handleSend}
-                friends={friends}
-                selectedRecipients={selectedRecipients}
-                onToggleRecipient={toggleRecipient}
-                caption={caption}
-                onCaptionChange={setCaption}
-                onBack={() => {
-                  setCapturedImage(null);
-                  setShowCamera(false);
-                }}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Invite popup */}
-      <AnimatePresence>
-        {showInvitePopup && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
-            style={{ background: 'rgba(0, 0, 0, 0.6)' }}
-            onClick={() => setShowInvitePopup(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-[340px] rounded-3xl overflow-hidden shadow-2xl p-6"
+              initial={{ opacity: 0, y: -100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -100 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="fixed left-1/2 top-4 z-50 max-w-[calc(100vw-1rem)] -translate-x-1/2 rounded-full px-4 py-3 shadow-2xl sm:top-8 sm:px-6 sm:py-4"
               style={{
-                background: 'var(--tet-cream)',
-                border: '3px solid var(--tet-gold)'
+                background: 'var(--tet-red)',
+                border: '2px solid var(--tet-gold)',
+                color: 'var(--tet-cream)',
+                maxWidth: '90%'
               }}
             >
-              <InvitePopup onClose={() => setShowInvitePopup(false)} />
+              <p className="text-center font-medium">{latestPhoto.name} vừa gửi ảnh cho bạn! 📸</p>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          )}
+        </AnimatePresence>
+
+        {/* Camera modal */}
+        <AnimatePresence>
+          {showCamera && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
+              style={{ background: 'rgba(0, 0, 0, 0.8)' }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="overflow-hidden rounded-[2.5rem] shadow-2xl"
+                style={deviceFrameStyle}
+              >
+                <CameraScreen
+                  capturedImage={capturedImage}
+                  onCapture={handleCapture}
+                  onSend={handleSend}
+                  friends={friends}
+                  selectedRecipients={selectedRecipients}
+                  onToggleRecipient={toggleRecipient}
+                  caption={caption}
+                  onCaptionChange={setCaption}
+                  onBack={() => {
+                    setCapturedImage(null);
+                    setShowCamera(false);
+                  }}
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Invite popup */}
+        <AnimatePresence>
+          {showInvitePopup && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
+              style={{ background: 'rgba(0, 0, 0, 0.6)' }}
+              onClick={() => setShowInvitePopup(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-[340px] rounded-3xl overflow-hidden shadow-2xl p-6"
+                style={{
+                  background: 'var(--tet-cream)',
+                  border: '3px solid var(--tet-gold)'
+                }}
+              >
+                <InvitePopup onClose={() => setShowInvitePopup(false)} />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </ProtectedRoute>
   );
 }
 
 function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange, onLike, onCameraClick }: any) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isSnapLockedRef = useRef(false);
+  const snapUnlockTimeoutRef = useRef<number | null>(null);
   const activePhoto = photos.find((item: any) => item.id === activePhotoId) ?? photos[0];
   const liked = likedPhotoIds.includes(activePhoto.id);
   const actionBoxHeight = 92;
   const actionBoxBottomOffset = 30;
   const cardToActionGap = -34;
   const scrollViewportBottom = actionBoxHeight + actionBoxBottomOffset + cardToActionGap;
+  const activePhotoIndex = photos.findIndex((photo: any) => photo.id === activePhoto.id);
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -381,6 +439,36 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
     }
 
     let ticking = false;
+
+    const lockSnap = () => {
+      isSnapLockedRef.current = true;
+
+      if (snapUnlockTimeoutRef.current) {
+        window.clearTimeout(snapUnlockTimeoutRef.current);
+      }
+
+      snapUnlockTimeoutRef.current = window.setTimeout(() => {
+        isSnapLockedRef.current = false;
+      }, 420);
+    };
+
+    const scrollToPhotoIndex = (targetIndex: number) => {
+      const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-home-photo-id]'));
+      const boundedIndex = Math.max(0, Math.min(targetIndex, sections.length - 1));
+      const targetSection = sections[boundedIndex];
+      const targetPhotoId = Number(targetSection?.dataset.homePhotoId);
+
+      if (!targetSection || Number.isNaN(targetPhotoId)) {
+        return;
+      }
+
+      lockSnap();
+      onActivePhotoChange(targetPhotoId);
+      container.scrollTo({
+        top: targetSection.offsetTop,
+        behavior: "smooth",
+      });
+    };
 
     const updateActivePhoto = () => {
       const viewportHeight = container.clientHeight;
@@ -413,6 +501,27 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
 
     updateActivePhoto();
 
+    const handleWheel = (event: WheelEvent) => {
+      if (Math.abs(event.deltaY) < 10) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (isSnapLockedRef.current) {
+        return;
+      }
+
+      const direction = event.deltaY > 0 ? 1 : -1;
+      const targetIndex = activePhotoIndex + direction;
+
+      if (targetIndex === activePhotoIndex) {
+        return;
+      }
+
+      scrollToPhotoIndex(targetIndex);
+    };
+
     const handleScroll = () => {
       if (ticking) {
         return;
@@ -425,12 +534,18 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
       });
     };
 
+    container.addEventListener('wheel', handleWheel, { passive: false });
     container.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
+      if (snapUnlockTimeoutRef.current) {
+        window.clearTimeout(snapUnlockTimeoutRef.current);
+      }
+
+      container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('scroll', handleScroll);
     };
-  }, [activePhotoId, onActivePhotoChange]);
+  }, [activePhotoId, activePhotoIndex, onActivePhotoChange]);
 
   return (
     <div className="relative h-full overflow-hidden">
@@ -452,7 +567,7 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
             <section
               key={photo.id}
               data-home-photo-id={photo.id}
-              className="snap-center h-full flex items-start justify-center overflow-hidden"
+              className="snap-center snap-always h-full flex items-start justify-center overflow-hidden"
             >
               <motion.article
                 initial={{ opacity: 0, y: 28 }}

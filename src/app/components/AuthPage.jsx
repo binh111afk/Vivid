@@ -49,8 +49,7 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = readStoredUser();
-    setUser(storedUser);
+    setUser(readStoredUser());
     setIsLoading(false);
   }, []);
 
@@ -74,13 +73,13 @@ export function AuthProvider({ children }) {
     return payload.user;
   };
 
-  const register = async ({ username, password }) => {
+  const register = async ({ username, password, displayName }) => {
     const response = await fetch("/api/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, displayName }),
     });
 
     const payload = await response.json();
@@ -118,12 +117,13 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-export default function AuthForm({ defaultMode = "login", onSuccess }) {
+export default function AuthPage({ defaultMode = "login", onSuccess }) {
   const { login, register } = useAuth();
   const [mode, setMode] = useState(defaultMode);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
+    displayName: "",
   });
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -200,6 +200,19 @@ export default function AuthForm({ defaultMode = "login", onSuccess }) {
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
+        {!isLoginMode && (
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-[#800020]">Tên hiển thị</span>
+            <input
+              name="displayName"
+              value={formData.displayName}
+              onChange={handleChange}
+              placeholder="Ví dụ: Minh Anh"
+              className="w-full rounded-2xl border border-[rgba(128,0,32,0.18)] bg-[rgba(255,253,208,0.58)] px-4 py-3 text-[#361812] placeholder:text-[rgba(54,24,18,0.42)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] outline-none backdrop-blur-xl transition-all focus:border-[#800020] focus:ring-4 focus:ring-[rgba(128,0,32,0.12)]"
+            />
+          </label>
+        )}
+
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-[#800020]">Tên đăng nhập</span>
           <input

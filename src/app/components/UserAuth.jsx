@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut, ShieldCheck } from "lucide-react";
 
-import AuthForm, { useAuth } from "./AuthForm.jsx";
+import AuthPage, { useAuth } from "./AuthPage.jsx";
 
 function buildFallbackAvatar(name = "Vivid User") {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=800020&color=FFFDD0&bold=true`;
@@ -45,7 +45,7 @@ export default function UserAuth() {
 
         {isMenuOpen && (
           <div className="absolute right-0 top-[calc(100%+0.75rem)] z-30 w-[20rem]">
-            <AuthForm onSuccess={() => setIsMenuOpen(false)} />
+            <AuthPage onSuccess={() => setIsMenuOpen(false)} />
           </div>
         )}
       </div>
