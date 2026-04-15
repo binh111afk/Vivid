@@ -433,15 +433,12 @@ export default function App() {
 
 function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange, onLike, onCameraClick }: any) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const isSnapLockedRef = useRef(false);
-  const snapUnlockTimeoutRef = useRef<number | null>(null);
   const activePhoto = photos.find((item: any) => item.id === activePhotoId) ?? photos[0];
   const liked = likedPhotoIds.includes(activePhoto.id);
   const actionBoxHeight = 92;
   const actionBoxBottomOffset = 30;
   const cardToActionGap = -34;
   const scrollViewportBottom = actionBoxHeight + actionBoxBottomOffset + cardToActionGap;
-  const activePhotoIndex = photos.findIndex((photo: any) => photo.id === activePhoto.id);
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -451,36 +448,6 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
     }
 
     let ticking = false;
-
-    const lockSnap = () => {
-      isSnapLockedRef.current = true;
-
-      if (snapUnlockTimeoutRef.current) {
-        window.clearTimeout(snapUnlockTimeoutRef.current);
-      }
-
-      snapUnlockTimeoutRef.current = window.setTimeout(() => {
-        isSnapLockedRef.current = false;
-      }, 420);
-    };
-
-    const scrollToPhotoIndex = (targetIndex: number) => {
-      const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-home-photo-id]'));
-      const boundedIndex = Math.max(0, Math.min(targetIndex, sections.length - 1));
-      const targetSection = sections[boundedIndex];
-      const targetPhotoId = Number(targetSection?.dataset.homePhotoId);
-
-      if (!targetSection || Number.isNaN(targetPhotoId)) {
-        return;
-      }
-
-      lockSnap();
-      onActivePhotoChange(targetPhotoId);
-      container.scrollTo({
-        top: targetSection.offsetTop,
-        behavior: "smooth",
-      });
-    };
 
     const updateActivePhoto = () => {
       const viewportHeight = container.clientHeight;
@@ -513,27 +480,6 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
 
     updateActivePhoto();
 
-    const handleWheel = (event: WheelEvent) => {
-      if (Math.abs(event.deltaY) < 10) {
-        return;
-      }
-
-      event.preventDefault();
-
-      if (isSnapLockedRef.current) {
-        return;
-      }
-
-      const direction = event.deltaY > 0 ? 1 : -1;
-      const targetIndex = activePhotoIndex + direction;
-
-      if (targetIndex === activePhotoIndex) {
-        return;
-      }
-
-      scrollToPhotoIndex(targetIndex);
-    };
-
     const handleScroll = () => {
       if (ticking) {
         return;
@@ -546,18 +492,12 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
       });
     };
 
-    container.addEventListener('wheel', handleWheel, { passive: false });
     container.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      if (snapUnlockTimeoutRef.current) {
-        window.clearTimeout(snapUnlockTimeoutRef.current);
-      }
-
-      container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('scroll', handleScroll);
     };
-  }, [activePhotoId, activePhotoIndex, onActivePhotoChange]);
+  }, [activePhotoId, onActivePhotoChange]);
 
   return (
     <div className="relative h-full overflow-hidden">
