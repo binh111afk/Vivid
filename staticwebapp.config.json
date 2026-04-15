@@ -1,0 +1,48 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/images/*.{png,jpg,jpeg,gif,webp,svg}",
+      "/assets/*",
+      "/*.{css,js,json,ico}"
+    ]
+  },
+  "routes": [
+    {
+      "route": "/login",
+      "redirect": "/.auth/login/google"
+    },
+    {
+      "route": "/logout",
+      "redirect": "/.auth/logout?post_logout_redirect_uri=/"
+    },
+    {
+      "route": "/dashboard*",
+      "allowedRoles": [
+        "authenticated"
+      ]
+    },
+    {
+      "route": "/capture*",
+      "allowedRoles": [
+        "authenticated"
+      ]
+    },
+    {
+      "route": "/api/capture*",
+      "allowedRoles": [
+        "authenticated"
+      ]
+    }
+  ],
+  "responseOverrides": {
+    "401": {
+      "statusCode": 302,
+      "redirect": "/login"
+    },
+    "403": {
+      "statusCode": 302,
+      "redirect": "/login"
+    }
+  }
+}

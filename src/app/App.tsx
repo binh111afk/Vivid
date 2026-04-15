@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Home, Camera, Users, Heart, History, TrendingUp, Lock, Globe, X, Copy, Check } from 'lucide-react';
+import UserAuth from './components/UserAuth.jsx';
 
 // Mock data
 const friends = [
@@ -169,12 +170,7 @@ export default function App() {
             </div>
             <div className="flex items-center gap-3">
               <Lantern />
-              <div
-                className="w-10 h-10 rounded-full overflow-hidden shadow-lg cursor-pointer"
-                style={{ border: '2px solid var(--tet-gold)' }}
-              >
-                <img src="https://i.pravatar.cc/150?img=8" alt="User" className="w-full h-full object-cover" />
-              </div>
+              <UserAuth />
             </div>
           </header>
 
