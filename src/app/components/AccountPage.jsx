@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Camera, ImagePlus, KeyRound, LogOut, Save, ShieldCheck, UserRound } from "lucide-react";
+import Cropper from "react-easy-crop";
 
 import { useAuth } from "./AuthPage.jsx";
 
@@ -24,6 +25,43 @@ function SectionCard({ icon, title, description, children }) {
   );
 }
 
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", (error) => reject(error));
+    image.src = src;
+  });
+}
+
+async function getCroppedAvatarDataUrl(imageSrc, cropPixels) {
+  const image = await loadImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  const size = 420;
+
+  canvas.width = size;
+  canvas.height = size;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Không thể xử lý ảnh vào lúc này.");
+  }
+
+  context.drawImage(
+    image,
+    cropPixels.x,
+    cropPixels.y,
+    cropPixels.width,
+    cropPixels.height,
+    0,
+    0,
+    size,
+    size,
+  );
+
+  return canvas.toDataURL("image/jpeg", 0.92);
+}
+
 export default function AccountPage({ onBack = () => {} }) {
   const { user, updateProfile, changePassword, logout } = useAuth();
   const [profileForm, setProfileForm] = useState({
@@ -39,6 +77,12 @@ export default function AccountPage({ onBack = () => {} }) {
   const [passwordMessage, setPasswordMessage] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState("");
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedPixels, setCroppedPixels] = useState(null);
+  const [isApplyingCrop, setIsApplyingCrop] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -51,6 +95,11 @@ export default function AccountPage({ onBack = () => {} }) {
       avatar: user.avatar || "",
     });
     setPendingAvatar("");
+    setIsCropModalOpen(false);
+    setImageToCrop("");
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedPixels(null);
   }, [user]);
 
   if (!user) {
@@ -70,14 +119,50 @@ export default function AccountPage({ onBack = () => {} }) {
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : "";
-      setProfileForm((prev) => ({
-        ...prev,
-        avatar: result,
-      }));
-      setPendingAvatar(result);
-      setProfileMessage("Ảnh đại diện mới đã được tải lên, nhớ bấm Lưu thay đổi.");
+      setImageToCrop(result);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCroppedPixels(null);
+      setIsCropModalOpen(true);
+      setProfileMessage("");
     };
     reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handleCropComplete = (_, areaPixels) => {
+    setCroppedPixels(areaPixels);
+  };
+
+  const handleCancelCrop = () => {
+    setIsCropModalOpen(false);
+    setImageToCrop("");
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedPixels(null);
+  };
+
+  const handleApplyCrop = async () => {
+    if (!imageToCrop || !croppedPixels) {
+      return;
+    }
+
+    setIsApplyingCrop(true);
+
+    try {
+      const croppedAvatar = await getCroppedAvatarDataUrl(imageToCrop, croppedPixels);
+      setProfileForm((prev) => ({
+        ...prev,
+        avatar: croppedAvatar,
+      }));
+      setPendingAvatar(croppedAvatar);
+      setProfileMessage("Ảnh đại diện mới đã được căn chỉnh, nhớ bấm Lưu thay đổi.");
+      handleCancelCrop();
+    } catch (error) {
+      setProfileMessage(error?.message || "Không thể cắt ảnh. Vui lòng thử lại.");
+    } finally {
+      setIsApplyingCrop(false);
+    }
   };
 
   const handleProfileSubmit = async (event) => {
@@ -140,7 +225,7 @@ export default function AccountPage({ onBack = () => {} }) {
             <img
               src={previewAvatarUrl}
               alt={user.displayName ?? user.username ?? "Ảnh đại diện người dùng"}
-              className="h-20 w-20 rounded-full border-[3px] border-[var(--tet-gold)] object-contain shadow-[0_18px_36px_rgba(128,0,32,0.12)]"
+              className="h-20 w-20 shrink-0 rounded-full border-[3px] border-[var(--tet-gold)] object-cover shadow-[0_18px_36px_rgba(128,0,32,0.12)]"
             />
             <div className="min-w-0">
               <p className="truncate text-xl font-semibold text-[#800020]">{user.displayName || user.username}</p>
@@ -163,7 +248,7 @@ export default function AccountPage({ onBack = () => {} }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="relative h-20 w-20 overflow-hidden rounded-full border-[3px] border-[var(--tet-gold)]"
+                className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-[3px] border-[var(--tet-gold)]"
               >
                 <img src={previewAvatarUrl} alt="Avatar preview" className="h-full w-full object-cover" />
                 <div className="absolute inset-0 flex items-center justify-center bg-[rgba(54,24,18,0.32)] text-[#FFFDD0]">
@@ -313,6 +398,65 @@ export default function AccountPage({ onBack = () => {} }) {
           </div>
         </SectionCard>
       </div>
+
+      {isCropModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(54,24,18,0.45)] p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-md rounded-[1.8rem] border border-[rgba(128,0,32,0.14)] bg-[rgba(255,253,208,0.98)] p-5 shadow-[0_26px_50px_rgba(54,24,18,0.25)]">
+            <h4 className="text-lg font-semibold text-[#800020]">Căn chỉnh ảnh đại diện</h4>
+            <p className="mt-1 text-sm text-[rgba(54,24,18,0.72)]">
+              Kéo ảnh để canh vị trí và dùng thanh trượt để phóng to hoặc thu nhỏ trong khung tròn.
+            </p>
+
+            <div className="relative mt-4 h-72 overflow-hidden rounded-[1.3rem] border border-[rgba(128,0,32,0.12)] bg-[rgba(128,0,32,0.08)]">
+              <Cropper
+                image={imageToCrop}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                cropShape="round"
+                showGrid={false}
+                objectFit="cover"
+                onCropChange={setCrop}
+                onCropComplete={handleCropComplete}
+                onZoomChange={setZoom}
+              />
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-[#800020]">
+                Độ phóng
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                onChange={(event) => setZoom(Number(event.target.value))}
+                className="w-full accent-[#800020]"
+              />
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={handleCancelCrop}
+                className="inline-flex items-center justify-center rounded-full border border-[rgba(128,0,32,0.2)] bg-[rgba(255,255,255,0.6)] px-4 py-2.5 text-sm font-medium text-[#800020]"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isApplyingCrop || !croppedPixels}
+                onClick={handleApplyCrop}
+                className="inline-flex items-center justify-center rounded-full bg-[#800020] px-4 py-2.5 text-sm font-medium text-[#FFFDD0] transition-colors hover:bg-[#68001a] disabled:opacity-70"
+              >
+                {isApplyingCrop ? "Đang xử lý..." : "Dùng ảnh này"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
