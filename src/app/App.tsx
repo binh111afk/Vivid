@@ -264,7 +264,8 @@ export default function App() {
       const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(payload?.message || 'Không thể đăng ảnh lên feed.');
+        const detail = payload?.detail ? `\nChi tiết: ${payload.detail}` : '';
+        throw new Error((payload?.message || 'Không thể đăng ảnh lên feed.') + detail);
       }
 
       const newFeedCard = mapFeedItem(payload?.post || {});

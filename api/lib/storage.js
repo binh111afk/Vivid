@@ -47,9 +47,7 @@ async function uploadImageFromDataUrl(dataUrl, options = {}) {
   const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
   const containerClient = blobServiceClient.getContainerClient(containerName);
 
-  await containerClient.createIfNotExists({
-    access: "blob",
-  });
+  await containerClient.createIfNotExists();
 
   const buffer = Buffer.from(data, "base64");
   const ext = extensionFromMimeType(mimeType);
