@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { LoaderCircle, LogIn, UserPlus } from "lucide-react";
 
 const STORAGE_KEY = "vivid:user";
+const AUTH_REQUEST_TIMEOUT_MS = 15000;
 
 const AuthContext = createContext({
   user: null,
@@ -44,56 +45,94 @@ function persistUser(user) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
 }
 
+async function requestAuth(endpoint, body) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
+
+  console.log(`[Auth] Sending request to ${endpoint}`, {
+    endpoint,
+    username: body.username,
+    displayName: body.displayName,
+  });
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    const rawText = await response.text();
+    let payload = null;
+
+    try {
+      payload = rawText ? JSON.parse(rawText) : null;
+    } catch (parseError) {
+      console.error(`[Auth] Failed to parse JSON from ${endpoint}`, parseError, rawText);
+      throw new Error("Phản hồi từ máy chủ không hợp lệ.");
+    }
+
+    console.log(`[Auth] Response from ${endpoint}`, {
+      status: response.status,
+      ok: response.ok,
+      payload,
+    });
+
+    if (!response.ok) {
+      throw new Error(payload?.message || "Yêu cầu xác thực thất bại.");
+    }
+
+    return payload;
+  } catch (error) {
+    if (error.name === "AbortError") {
+      console.error(`[Auth] Request timeout after ${AUTH_REQUEST_TIMEOUT_MS}ms`, {
+        endpoint,
+        username: body.username,
+      });
+      throw new Error("Yêu cầu đang mất quá lâu. Vui lòng kiểm tra API hoặc kết nối mạng.");
+    }
+
+    console.error(`[Auth] Request failed for ${endpoint}`, error);
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setUser(readStoredUser());
+    const storedUser = readStoredUser();
+    console.log("[Auth] Restoring user from localStorage", storedUser);
+    setUser(storedUser);
     setIsLoading(false);
   }, []);
 
   const login = async ({ username, password }) => {
-    const response = await fetch("/api/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    const payload = await response.json();
-
-    if (!response.ok) {
-      throw new Error(payload?.message || "Đăng nhập thất bại.");
-    }
+    const payload = await requestAuth("/api/login", { username, password });
 
     persistUser(payload.user);
     setUser(payload.user);
+    console.log("[Auth] Login successful", payload.user);
     return payload.user;
   };
 
   const register = async ({ username, password, displayName }) => {
-    const response = await fetch("/api/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username, password, displayName }),
-    });
-
-    const payload = await response.json();
-
-    if (!response.ok) {
-      throw new Error(payload?.message || "Đăng ký thất bại.");
-    }
+    const payload = await requestAuth("/api/register", { username, password, displayName });
 
     persistUser(payload.user);
     setUser(payload.user);
+    console.log("[Auth] Register successful", payload.user);
     return payload.user;
   };
 
   const logout = () => {
+    console.log("[Auth] Logging out current user");
     persistUser(null);
     setUser(null);
   };
@@ -140,6 +179,11 @@ export default function AuthPage({ defaultMode = "login", onSuccess }) {
     setError("");
     setIsSubmitting(true);
 
+    console.log(`[Auth] Submitting ${isLoginMode ? "login" : "register"} form`, {
+      username: formData.username,
+      displayName: formData.displayName,
+    });
+
     try {
       if (isLoginMode) {
         await login(formData);
@@ -147,8 +191,10 @@ export default function AuthPage({ defaultMode = "login", onSuccess }) {
         await register(formData);
       }
 
+      console.log(`[Auth] ${isLoginMode ? "Login" : "Register"} flow completed successfully`);
       onSuccess?.();
     } catch (submitError) {
+      console.error(`[Auth] ${isLoginMode ? "Login" : "Register"} flow failed`, submitError);
       setError(submitError.message);
     } finally {
       setIsSubmitting(false);
