@@ -16,7 +16,7 @@ function SectionCard({ icon, title, description, children }) {
         </div>
         <div>
           <h3 className="text-base font-semibold text-[#800020]">{title}</h3>
-          <p className="mt-1 text-sm leading-relaxed text-[rgba(54,24,18,0.68)]">{description}</p>
+          {description ? <p className="mt-1 text-sm leading-relaxed text-[rgba(54,24,18,0.68)]">{description}</p> : null}
         </div>
       </div>
       {children}
@@ -139,14 +139,14 @@ export default function AccountPage({ onBack = () => {} }) {
           <div className="flex items-center gap-4">
             <img
               src={previewAvatarUrl}
-              alt={user.displayName ?? user.username ?? "User avatar"}
+              alt={user.displayName ?? user.username ?? "Ảnh đại diện người dùng"}
               className="h-20 w-20 rounded-full border-[3px] border-[var(--tet-gold)] object-cover shadow-[0_18px_36px_rgba(128,0,32,0.12)]"
             />
             <div className="min-w-0">
               <p className="truncate text-xl font-semibold text-[#800020]">{user.displayName || user.username}</p>
               <p className="mt-1 text-sm text-[rgba(54,24,18,0.7)]">@{user.username}</p>
               <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[rgba(128,0,32,0.72)]">
-                Trung tam quan ly tai khoan
+                Trung tâm quản lý tài khoản
               </p>
             </div>
           </div>
@@ -156,8 +156,7 @@ export default function AccountPage({ onBack = () => {} }) {
       <div className="space-y-4 pb-6">
         <SectionCard
           icon={<UserRound className="h-5 w-5" />}
-          title="Ho so"
-          description="Cap nhat ten hien thi va anh dai dien de giao dien Vivid mang dau an cua ban."
+          title="Hồ sơ"
         >
           <form className="space-y-4" onSubmit={handleProfileSubmit}>
             <div className="flex items-center gap-4">
@@ -179,7 +178,7 @@ export default function AccountPage({ onBack = () => {} }) {
                   className="inline-flex items-center gap-2 rounded-full border border-[rgba(128,0,32,0.14)] bg-[rgba(128,0,32,0.08)] px-4 py-2 text-sm font-medium text-[#800020]"
                 >
                   <ImagePlus className="h-4 w-4" />
-                  Tai anh dai dien
+                    Tải ảnh đại diện
                 </button>
                 <input
                   ref={fileInputRef}
@@ -189,7 +188,7 @@ export default function AccountPage({ onBack = () => {} }) {
                   onChange={handleAvatarChange}
                 />
                 <p className="mt-2 text-xs leading-relaxed text-[rgba(54,24,18,0.62)]">
-                  Chon mot anh chan dung vuong. Vivid se hien thi anh duoi dang avatar tron sau khi ban luu.
+                  Chọn một ảnh chân dung vuông. Vivid sẽ hiển thị ảnh dưới dạng avatar tròn sau khi bạn lưu.
                 </p>
               </div>
             </div>
@@ -198,13 +197,13 @@ export default function AccountPage({ onBack = () => {} }) {
               <div className="rounded-[1.5rem] border border-[rgba(128,0,32,0.1)] bg-[rgba(255,253,208,0.56)] px-4 py-4">
                 <div className="mb-3 flex items-center gap-2 text-[#800020]">
                   <ImagePlus className="h-4 w-4" />
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em]">Preview avatar</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em]">Xem trước avatar</span>
                 </div>
                 <div className="flex items-center justify-center">
                   <div className="rounded-full border-4 border-[var(--tet-gold)] p-1 shadow-[0_18px_35px_rgba(128,0,32,0.14)]">
                     <img
                       src={pendingAvatar}
-                      alt="Pending avatar preview"
+                      alt="Xem trước ảnh đại diện mới"
                       className="h-24 w-24 rounded-full object-cover"
                     />
                   </div>
@@ -213,7 +212,7 @@ export default function AccountPage({ onBack = () => {} }) {
             )}
 
             <label className="block">
-              <span className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-[#800020]">Ten hien thi</span>
+              <span className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-[#800020]">Tên hiển thị</span>
               <input
                 value={profileForm.displayName}
                 onChange={(event) =>
@@ -238,19 +237,18 @@ export default function AccountPage({ onBack = () => {} }) {
               className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#800020] px-4 py-3 text-sm font-medium text-[#FFFDD0] transition-colors hover:bg-[#68001a] disabled:opacity-70"
             >
               <Save className="h-4 w-4" />
-              {isSavingProfile ? "Dang luu..." : "Luu thay doi"}
+              {isSavingProfile ? "Đang lưu..." : "Lưu thay đổi"}
             </button>
           </form>
         </SectionCard>
 
         <SectionCard
           icon={<KeyRound className="h-5 w-5" />}
-          title="Bao mat"
-          description="Nhap mat khau hien tai truoc khi dat mat khau moi de giu tai khoan an toan."
+          title="Bảo mật"
         >
           <form className="space-y-4" onSubmit={handlePasswordSubmit}>
             <label className="block">
-              <span className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-[#800020]">Mat khau hien tai</span>
+              <span className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-[#800020]">Mật khẩu hiện tại</span>
               <input
                 type="password"
                 value={passwordForm.currentPassword}
@@ -265,7 +263,7 @@ export default function AccountPage({ onBack = () => {} }) {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-[#800020]">Mat khau moi</span>
+              <span className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-[#800020]">Mật khẩu mới</span>
               <input
                 type="password"
                 value={passwordForm.newPassword}
@@ -291,19 +289,18 @@ export default function AccountPage({ onBack = () => {} }) {
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[rgba(128,0,32,0.18)] bg-[rgba(128,0,32,0.08)] px-4 py-3 text-sm font-medium text-[#800020] transition-colors hover:bg-[rgba(128,0,32,0.12)] disabled:opacity-70"
             >
               <KeyRound className="h-4 w-4" />
-              {isChangingPassword ? "Dang doi mat khau..." : "Dat lai mat khau"}
+              {isChangingPassword ? "Đang đổi mật khẩu..." : "Đặt lại mật khẩu"}
             </button>
           </form>
         </SectionCard>
 
         <SectionCard
           icon={<ShieldCheck className="h-5 w-5" />}
-          title="Phien lam viec"
-          description="Quan ly thiet bi hien tai va dang xuat khoi tai khoan khi ban muon dung phien nay."
+          title="Phiên làm việc"
         >
           <div className="rounded-[1.4rem] border border-[rgba(128,0,32,0.08)] bg-[rgba(255,253,208,0.48)] px-4 py-4">
             <p className="text-sm leading-relaxed text-[rgba(54,24,18,0.72)]">
-              Ban dang dang nhap tren thiet bi nay. Ho so va avatar se duoc luu cho nhung lan mo app tiep theo.
+              Bạn đang đăng nhập trên thiết bị này. Hồ sơ và avatar sẽ được lưu cho những lần mở ứng dụng tiếp theo.
             </p>
           </div>
 
@@ -314,7 +311,7 @@ export default function AccountPage({ onBack = () => {} }) {
               className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#800020] px-4 py-3 text-sm font-medium text-[#FFFDD0] transition-colors hover:bg-[#68001a]"
             >
               <LogOut className="h-4 w-4" />
-              Dang xuat
+              Đăng xuất
             </button>
           </div>
         </SectionCard>
