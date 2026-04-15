@@ -84,7 +84,7 @@ const summaries = [
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'history' | 'summary' | 'friends'>('home');
   const [showNotification, setShowNotification] = useState(false);
-  const [liked, setLiked] = useState(false);
+  const [likedPhotoIds, setLikedPhotoIds] = useState<number[]>([]);
   const [historyFilter, setHistoryFilter] = useState<'day' | 'week' | 'month'>('day');
   const [selectedFriend, setSelectedFriend] = useState<string>('Bạn');
   const [summaryFilter, setSummaryFilter] = useState<'week' | 'month'>('week');
@@ -94,8 +94,9 @@ export default function App() {
   const [selectedRecipients, setSelectedRecipients] = useState<number[]>([]);
   const [caption, setCaption] = useState('');
   const [showInvitePopup, setShowInvitePopup] = useState(false);
+  const [currentHomePhotoId, setCurrentHomePhotoId] = useState(friends[0].id);
 
-  const latestPhoto = friends[0];
+  const latestPhoto = friends.find((friend) => friend.id === currentHomePhotoId) ?? friends[0];
   const deviceFrameStyle = {
     background: 'var(--tet-cream)',
     width: 'min(390px, calc(100vw - 1rem), calc((100dvh - 1rem) * 390 / 844))',
@@ -122,6 +123,12 @@ export default function App() {
     );
   };
 
+  const toggleHomeLike = (id: number) => {
+    setLikedPhotoIds((prev) =>
+      prev.includes(id) ? prev.filter((photoId) => photoId !== id) : [...prev, id]
+    );
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => setShowNotification(true), 1000);
     const hideTimer = setTimeout(() => setShowNotification(false), 4000);
@@ -133,7 +140,7 @@ export default function App() {
 
   return (
     <div
-      className="relative flex min-h-dvh items-center justify-center overflow-hidden p-2 sm:p-4"
+      className="theme-vivid relative flex min-h-dvh items-center justify-center overflow-hidden p-2 sm:p-4"
       style={{ background: 'var(--tet-cream)' }}
     >
       {/* Decorative cherry blossoms */}
@@ -183,9 +190,11 @@ export default function App() {
                   className="h-full"
                 >
                   <HomeScreen
-                    photo={latestPhoto}
-                    liked={liked}
-                    onLike={() => setLiked(!liked)}
+                    photos={friends}
+                    activePhotoId={currentHomePhotoId}
+                    likedPhotoIds={likedPhotoIds}
+                    onActivePhotoChange={setCurrentHomePhotoId}
+                    onLike={toggleHomeLike}
                     onCameraClick={() => setShowCamera(true)}
                   />
                 </motion.div>
@@ -359,78 +368,238 @@ export default function App() {
   );
 }
 
-function HomeScreen({ photo, liked, onLike, onCameraClick }: any) {
+function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange, onLike, onCameraClick }: any) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const activePhoto = photos.find((item: any) => item.id === activePhotoId) ?? photos[0];
+  const liked = likedPhotoIds.includes(activePhoto.id);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    let ticking = false;
+
+    const updateActivePhoto = () => {
+      const viewportHeight = container.clientHeight;
+      const centerLine = container.scrollTop + viewportHeight / 2;
+      const sections = Array.from(container.querySelectorAll<HTMLElement>('[data-home-photo-id]'));
+
+      if (!sections.length) {
+        return;
+      }
+
+      let closestId = activePhotoId;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      sections.forEach((section) => {
+        const top = section.offsetTop;
+        const sectionCenter = top + section.offsetHeight / 2;
+        const distance = Math.abs(sectionCenter - centerLine);
+        const photoId = Number(section.dataset.homePhotoId);
+
+        if (distance < closestDistance && !Number.isNaN(photoId)) {
+          closestDistance = distance;
+          closestId = photoId;
+        }
+      });
+
+      if (closestId !== activePhotoId) {
+        onActivePhotoChange(closestId);
+      }
+    };
+
+    updateActivePhoto();
+
+    const handleScroll = () => {
+      if (ticking) {
+        return;
+      }
+
+      ticking = true;
+      requestAnimationFrame(() => {
+        updateActivePhoto();
+        ticking = false;
+      });
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [activePhotoId, onActivePhotoChange]);
+
   return (
-    <div className="h-full flex flex-col items-center justify-center px-1 pb-8">
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-        className="relative w-full px-1"
+    <div className="relative h-full overflow-hidden">
+      <div className="pointer-events-none absolute left-0 right-0 top-0 z-10 h-24" style={{
+        background: 'linear-gradient(to bottom, rgba(248, 239, 227, 0.94), rgba(248, 239, 227, 0))'
+      }} />
+
+      <div
+        ref={scrollRef}
+        className="h-full overflow-y-auto snap-y snap-mandatory px-3 pb-40"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {/* Photo frame */}
-        <div
-          className="relative w-full aspect-square rounded-3xl overflow-hidden shadow-2xl"
-          style={{ border: '4px solid var(--tet-gold)' }}
+        {photos.map((photo: any, index: number) => {
+          const isActive = photo.id === activePhoto.id;
+
+          return (
+            <section
+              key={photo.id}
+              data-home-photo-id={photo.id}
+              className="snap-center min-h-full flex items-center justify-center py-5"
+            >
+              <motion.article
+                initial={{ opacity: 0, y: 28 }}
+                animate={{
+                  opacity: isActive ? 1 : 0.72,
+                  y: 0,
+                  scale: isActive ? 1 : 0.92
+                }}
+                transition={{ delay: index * 0.05, duration: 0.28 }}
+                className="relative w-full max-w-[350px]"
+              >
+                <div
+                  className="relative aspect-[4/5] overflow-hidden rounded-[2rem] shadow-2xl"
+                  style={{
+                    border: isActive ? '4px solid var(--tet-gold)' : '2px solid rgba(200, 160, 90, 0.45)',
+                    boxShadow: isActive
+                      ? '0 24px 50px rgba(126, 34, 48, 0.28)'
+                      : '0 14px 32px rgba(47, 23, 21, 0.12)'
+                  }}
+                >
+                  <img src={photo.photo} alt={photo.name} className="h-full w-full object-cover" />
+
+                  <div className="absolute inset-0" style={{
+                    background: 'linear-gradient(to top, rgba(47, 23, 21, 0.82) 0%, rgba(47, 23, 21, 0.08) 46%, rgba(47, 23, 21, 0.18) 100%)'
+                  }} />
+
+                  <div className="absolute left-5 right-5 top-5 flex items-center justify-between">
+                    <div
+                      className="rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm"
+                      style={{
+                        background: 'rgba(248, 239, 227, 0.18)',
+                        border: '1px solid rgba(248, 239, 227, 0.28)',
+                        color: 'var(--tet-cream)'
+                      }}
+                    >
+                      {photo.online ? 'Đang hoạt động' : 'Vừa cập nhật'}
+                    </div>
+                    <div
+                      className="flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm"
+                      style={{
+                        background: 'rgba(161, 45, 58, 0.38)',
+                        border: '1px solid rgba(248, 239, 227, 0.2)',
+                        color: 'var(--tet-cream)'
+                      }}
+                    >
+                      <div className="h-2 w-2 rounded-full" style={{ background: 'var(--tet-gold)' }} />
+                      {photo.timestamp}
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <div className="mb-4 flex items-center gap-3">
+                      <div
+                        className="h-12 w-12 overflow-hidden rounded-full"
+                        style={{ border: '2px solid var(--tet-gold)' }}
+                      >
+                        <img src={photo.avatar} alt={photo.name} className="h-full w-full object-cover" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-semibold" style={{ color: 'var(--tet-cream)' }}>{photo.name}</p>
+                        <p className="text-sm" style={{ color: 'rgba(248, 239, 227, 0.82)' }}>
+                          Gửi ảnh cho gia đình
+                        </p>
+                      </div>
+                    </div>
+
+                    {photo.caption && (
+                      <div
+                        className="rounded-2xl px-4 py-3 backdrop-blur-sm"
+                        style={{
+                          background: 'rgba(248, 239, 227, 0.12)',
+                          border: '1px solid rgba(248, 239, 227, 0.18)'
+                        }}
+                      >
+                        <p className="text-sm leading-relaxed" style={{ color: 'var(--tet-cream)' }}>
+                          {photo.caption}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.article>
+            </section>
+          );
+        })}
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-5">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="pointer-events-auto rounded-[1.75rem] px-4 py-4 shadow-2xl"
+          style={{
+            background: 'rgba(248, 239, 227, 0.94)',
+            border: '1px solid rgba(161, 45, 58, 0.14)',
+            backdropFilter: 'blur(14px)'
+          }}
         >
-          <img src={photo.photo} alt="Latest" className="w-full h-full object-cover" />
-
-          {/* Caption overlay */}
-          {photo.caption && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-4/5 px-4 py-3 rounded-2xl" style={{
-              background: 'rgba(0, 0, 0, 0.6)'
-            }}>
-              <p className="text-center" style={{ color: 'white' }}>{photo.caption}</p>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--tet-red)', opacity: 0.72 }}>
+                Bảng ảnh gia đình
+              </p>
+              <p className="text-base font-semibold" style={{ color: 'var(--tet-black)' }}>
+                {activePhoto.name} đang ở trung tâm feed
+              </p>
             </div>
-          )}
-        </div>
-      </motion.div>
+            <div
+              className="rounded-full px-3 py-1 text-xs font-medium"
+              style={{
+                background: 'rgba(161, 45, 58, 0.08)',
+                color: 'var(--tet-red)'
+              }}
+            >
+              Vuốt lên xuống để xem thêm
+            </div>
+          </div>
 
-      {/* Sender info */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="mt-6 text-center"
-      >
-        <p className="text-lg" style={{ color: 'var(--tet-black)', fontFamily: 'var(--font-body)' }}>
-          <span style={{ color: 'var(--tet-red)' }}>{photo.name}</span> gửi · {photo.timestamp}
-        </p>
-      </motion.div>
+          <div className="flex items-center gap-3">
+            <motion.button
+              whileTap={{ scale: 0.94 }}
+              onClick={() => onLike(activePhoto.id)}
+              className="flex-1 rounded-full px-5 py-3 flex items-center justify-center gap-2 shadow-lg transition-all"
+              style={{
+                background: liked ? 'var(--tet-gold)' : 'var(--tet-red)',
+                border: '2px solid var(--tet-gold)',
+                color: 'var(--tet-cream)'
+              }}
+            >
+              <Heart size={20} fill={liked ? 'currentColor' : 'none'} />
+              <span className="font-medium">{liked ? 'Đã thích' : 'Thích'}</span>
+            </motion.button>
 
-      {/* Heart button */}
-      <motion.button
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.5 }}
-        whileTap={{ scale: 0.85 }}
-        onClick={onLike}
-        className="mt-6 px-8 py-3 rounded-full flex items-center gap-2 shadow-lg transition-all"
-        style={{
-          background: liked ? 'var(--tet-gold)' : 'var(--tet-red)',
-          border: '2px solid var(--tet-gold)',
-          color: 'var(--tet-cream)'
-        }}
-      >
-        <Heart size={20} fill={liked ? 'currentColor' : 'none'} />
-        <span className="font-medium">{liked ? 'Đã thích' : 'Thích'}</span>
-      </motion.button>
-
-      {/* Camera button */}
-      <motion.button
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onCameraClick}
-        className="mt-4 w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all"
-        style={{
-          background: 'white',
-          border: '3px solid var(--tet-red)'
-        }}
-      >
-        <Camera size={28} style={{ color: 'var(--tet-red)' }} />
-      </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={onCameraClick}
+              className="flex-1 rounded-full px-5 py-3 flex items-center justify-center gap-2 shadow-lg transition-all"
+              style={{
+                background: 'white',
+                border: '2px solid var(--tet-red)',
+                color: 'var(--tet-red)'
+              }}
+            >
+              <Camera size={20} />
+              <span className="font-medium">Chụp ảnh</span>
+            </motion.button>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }

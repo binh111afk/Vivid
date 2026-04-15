@@ -33,8 +33,8 @@ export default defineConfig({
         description: 'vivid photo-sharing app',
         start_url: '/',
         display: 'standalone',
-        background_color: '#FDF6EC',
-        theme_color: '#C0392B',
+        background_color: '#F8EFE3',
+        theme_color: '#A12D3A',
         icons: [
           {
             src: '/vivid-logo.svg',

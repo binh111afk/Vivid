@@ -5,8 +5,8 @@ import * as RechartsPrimitive from "recharts";
 
 import { cn } from "./utils";
 
-// Format: { THEME_NAME: CSS_SELECTOR }
-const THEMES = { light: "", dark: ".dark" } as const;
+// Charts inherit the single fixed Vivid theme instead of system light/dark modes.
+const THEMES = { vivid: ".theme-vivid" } as const;
 
 export type ChartConfig = {
   [k in string]: {

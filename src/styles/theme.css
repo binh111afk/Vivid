@@ -1,92 +1,89 @@
-@custom-variant dark (&:is(.dark *));
-
 :root {
-  /* Tết Color Palette */
-  --tet-red: #C0392B;
-  --tet-deep-red: #922B21;
-  --tet-gold: #D4AC0D;
-  --tet-cream: #FDF6EC;
-  --tet-black: #1A0A00;
+  --vivid-bordeaux: #a12d3a;
+  --vivid-bordeaux-deep: #7e2230;
+  --vivid-bordeaux-soft: #c95563;
+  --vivid-cream: #f8efe3;
+  --vivid-cream-strong: #f2e2cc;
+  --vivid-gold: #c8a05a;
+  --vivid-ink: #2f1715;
 
-  /* Font Families */
-  --font-display: 'Playfair Display', serif;
-  --font-body: 'Be Vietnam Pro', sans-serif;
+  color-scheme: light;
 
-  --font-size: 16px;
-  --background: #FDF6EC;
-  --foreground: #1A0A00;
-  --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #C0392B;
-  --primary-foreground: #FDF6EC;
-  --secondary: oklch(0.95 0.0058 264.53);
-  --secondary-foreground: #030213;
-  --muted: #ececf0;
-  --muted-foreground: #717182;
-  --accent: #D4AC0D;
-  --accent-foreground: #1A0A00;
-  --destructive: #d4183d;
-  --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
-  --input: transparent;
-  --input-background: #f3f3f5;
-  --switch-background: #cbced4;
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #030213;
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Prevent a flash of unexpected system colors before the app mounts. */
+  --background: var(--vivid-cream);
+  --foreground: var(--vivid-ink);
+  --primary: var(--vivid-bordeaux);
+  --primary-foreground: var(--vivid-cream);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+.theme-vivid {
+  color-scheme: light;
+
+  /* Brand palette */
+  --bg-color: var(--vivid-cream);
+  --surface-color: #fffaf3;
+  --surface-muted-color: var(--vivid-cream-strong);
+  --text-color: var(--vivid-ink);
+  --text-muted-color: #6e514c;
+  --primary-color: var(--vivid-bordeaux);
+  --primary-color-strong: var(--vivid-bordeaux-deep);
+  --primary-contrast-color: var(--vivid-cream);
+  --accent-color: var(--vivid-gold);
+  --accent-contrast-color: var(--vivid-ink);
+  --border-color: rgba(161, 45, 58, 0.18);
+  --input-surface-color: rgba(255, 250, 243, 0.98);
+  --switch-track-color: #d8c1b5;
+  --ring-color: rgba(161, 45, 58, 0.32);
+
+  /* Existing app aliases */
+  --tet-red: var(--primary-color);
+  --tet-deep-red: var(--primary-color-strong);
+  --tet-gold: var(--accent-color);
+  --tet-cream: var(--bg-color);
+  --tet-black: var(--text-color);
+
+  /* Font families */
+  --font-display: "Playfair Display", serif;
+  --font-body: "Be Vietnam Pro", sans-serif;
+
+  --font-size: 16px;
+  --background: var(--bg-color);
+  --foreground: var(--text-color);
+  --card: var(--surface-color);
+  --card-foreground: var(--text-color);
+  --popover: var(--surface-color);
+  --popover-foreground: var(--text-color);
+  --primary: var(--primary-color);
+  --primary-foreground: var(--primary-contrast-color);
+  --secondary: var(--surface-muted-color);
+  --secondary-foreground: var(--text-color);
+  --muted: var(--surface-muted-color);
+  --muted-foreground: var(--text-muted-color);
+  --accent: var(--accent-color);
+  --accent-foreground: var(--accent-contrast-color);
+  --destructive: #b5333d;
+  --destructive-foreground: #fffaf3;
+  --border: var(--border-color);
+  --input: var(--input-surface-color);
+  --input-background: var(--input-surface-color);
+  --switch-background: var(--switch-track-color);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --ring: var(--ring-color);
+  --chart-1: var(--primary-color);
+  --chart-2: #b65f49;
+  --chart-3: #8f6f4e;
+  --chart-4: #c8a05a;
+  --chart-5: #6f2a33;
+  --radius: 0.625rem;
+  --sidebar: rgba(255, 250, 243, 0.92);
+  --sidebar-foreground: var(--text-color);
+  --sidebar-primary: var(--primary-color);
+  --sidebar-primary-foreground: var(--primary-contrast-color);
+  --sidebar-accent: var(--surface-muted-color);
+  --sidebar-accent-foreground: var(--text-color);
+  --sidebar-border: var(--border-color);
+  --sidebar-ring: var(--ring-color);
 }
 
 @theme inline {
@@ -142,6 +139,7 @@
     min-height: 100dvh;
     overflow: hidden;
     overscroll-behavior: none;
+    background: var(--background);
   }
 
   body {
@@ -153,7 +151,6 @@
     font-family: var(--font-body) !important;
   }
 
-  /* Keep the app flush to the viewport and never show browser scrollbars. */
   *::-webkit-scrollbar {
     display: none;
   }
@@ -162,11 +159,6 @@
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
-
-  /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
 
   html {
     font-size: var(--font-size);
