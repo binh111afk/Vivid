@@ -140,12 +140,12 @@ export default function AccountPage({ onBack = () => {} }) {
             <img
               src={previewAvatarUrl}
               alt={user.displayName ?? user.username ?? "Ảnh đại diện người dùng"}
-              className="h-20 w-20 rounded-full border-[3px] border-[var(--tet-gold)] object-cover shadow-[0_18px_36px_rgba(128,0,32,0.12)]"
+              className="h-20 w-20 rounded-full border-[3px] border-[var(--tet-gold)] object-contain shadow-[0_18px_36px_rgba(128,0,32,0.12)]"
             />
             <div className="min-w-0">
               <p className="truncate text-xl font-semibold text-[#800020]">{user.displayName || user.username}</p>
               <p className="mt-1 text-sm text-[rgba(54,24,18,0.7)]">@{user.username}</p>
-              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[rgba(128,0,32,0.72)]">
+              <p className="mt-2 text-xl font-semibold text-[#800020]">
                 Trung tâm quản lý tài khoản
               </p>
             </div>
