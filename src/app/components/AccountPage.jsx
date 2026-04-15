@@ -124,7 +124,7 @@ export default function AccountPage({ onBack = () => {} }) {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-5 py-4" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+    <div className="h-full overflow-y-auto px-5 py-4 font-sans" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
       <div className="pb-6">
         <button
           type="button"
@@ -187,9 +187,6 @@ export default function AccountPage({ onBack = () => {} }) {
                   className="hidden"
                   onChange={handleAvatarChange}
                 />
-                <p className="mt-2 text-xs leading-relaxed text-[rgba(54,24,18,0.62)]">
-                  Chọn một ảnh chân dung vuông. Vivid sẽ hiển thị ảnh dưới dạng avatar tròn sau khi bạn lưu.
-                </p>
               </div>
             </div>
 
