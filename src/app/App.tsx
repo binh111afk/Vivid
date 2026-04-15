@@ -231,7 +231,17 @@ export default function App() {
   };
 
   const handleSend = async () => {
-    if (!capturedImage || !user?.username || !user?.token || isSendingPost) {
+    if (!capturedImage) {
+      alert('Chưa có ảnh để gửi.');
+      return;
+    }
+
+    if (!user?.username || !user?.token) {
+      alert('Phiên đăng nhập đã cũ hoặc hết hạn. Vui lòng đăng nhập lại để gửi ảnh.');
+      return;
+    }
+
+    if (isSendingPost) {
       return;
     }
 

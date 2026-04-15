@@ -122,6 +122,15 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const storedUser = readStoredUser();
     console.log("[Auth] Restoring user from localStorage", storedUser);
+
+    if (storedUser && !storedUser.token) {
+      console.warn("[Auth] Legacy session detected without token. Forcing re-login.");
+      persistUser(null);
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
     setUser(storedUser);
     setIsLoading(false);
   }, []);
