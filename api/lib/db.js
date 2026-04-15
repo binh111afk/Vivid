@@ -18,9 +18,15 @@ async function connectToDatabase() {
     return cachedConnection;
   }
 
+  console.log("[DB] Connecting to Cosmos DB with mongoose...");
+
   await mongoose.connect(connectionString, {
     dbName: process.env.COSMOSDB_DATABASE || "vivid",
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 15000,
   });
+
+  console.log("[DB] Connected to Cosmos DB successfully.");
 
   cachedConnection = mongoose.connection;
   return cachedConnection;

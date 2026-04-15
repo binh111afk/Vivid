@@ -3,65 +3,109 @@ const bcrypt = require("bcryptjs");
 const connectToDatabase = require("../lib/db");
 const User = require("../models/User");
 
-module.exports = async function (context, req) {
-  try {
-    await connectToDatabase();
+function createLogger(context) {
+  if (context?.log) {
+    return {
+      info: (...args) => context.log(...args),
+      error: (...args) => context.log.error(...args),
+    };
+  }
 
-    const username = typeof req.body?.username === "string" ? req.body.username.trim().toLowerCase() : "";
-    const password = typeof req.body?.password === "string" ? req.body.password : "";
+  return {
+    info: (...args) => console.log(...args),
+    error: (...args) => console.error(...args),
+  };
+}
+
+function sendResponse(target, status, body) {
+  if (target?.res && typeof target.res.status === "function") {
+    return target.res.status(status).json(body);
+  }
+
+  target.context.res = {
+    status,
+    body,
+  };
+  return target.context.res;
+}
+
+async function handleLogin(target) {
+  const logger = createLogger(target.context);
+
+  try {
+    logger.info("[Login] Request received");
+    await connectToDatabase();
+    logger.info("[Login] Database connection ready");
+
+    const requestBody = target.req?.body || {};
+    const username = typeof requestBody.username === "string" ? requestBody.username.trim().toLowerCase() : "";
+    const password = typeof requestBody.password === "string" ? requestBody.password : "";
+
+    logger.info("[Login] Parsed payload", { username });
 
     if (!username || !password) {
-      context.res = {
-        status: 400,
-        body: {
-          message: "Username và password là bắt buộc.",
-        },
-      };
-      return;
+      return sendResponse(target, 400, {
+        message: "Username và password là bắt buộc.",
+      });
     }
 
     const user = await User.findOne({ username });
+    logger.info("[Login] User lookup completed", { exists: Boolean(user) });
 
     if (!user) {
-      context.res = {
-        status: 401,
-        body: {
-          message: "Thông tin đăng nhập không đúng.",
-        },
-      };
-      return;
+      return sendResponse(target, 401, {
+        message: "Thông tin đăng nhập không đúng.",
+      });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    logger.info("[Login] Password comparison completed", { isPasswordValid });
 
     if (!isPasswordValid) {
-      context.res = {
-        status: 401,
-        body: {
-          message: "Thông tin đăng nhập không đúng.",
-        },
-      };
-      return;
+      return sendResponse(target, 401, {
+        message: "Thông tin đăng nhập không đúng.",
+      });
     }
 
-    context.res = {
-      status: 200,
-      body: {
-        user: {
-          id: user._id.toString(),
-          username: user.username,
-          displayName: user.displayName,
-          avatar: user.avatar,
-        },
+    logger.info("[Login] Login successful", { userId: user._id.toString() });
+
+    return sendResponse(target, 200, {
+      user: {
+        id: user._id.toString(),
+        username: user.username,
+        displayName: user.displayName,
+        avatar: user.avatar,
       },
-    };
+    });
   } catch (error) {
-    context.log.error("Login error", error);
-    context.res = {
-      status: 500,
-      body: {
-        message: "Không thể đăng nhập lúc này.",
-      },
-    };
+    logger.error("[Login] Error", error);
+    return sendResponse(target, 500, {
+      message: "Không thể đăng nhập lúc này.",
+      detail: error?.message || "Unknown login error",
+    });
   }
+}
+
+module.exports = async function loginHandler(arg1, arg2) {
+  const isVercelRuntime = Boolean(arg2 && typeof arg2.status === "function");
+
+  if (isVercelRuntime) {
+    const req = arg1;
+    const res = arg2;
+
+    if (req.method !== "POST") {
+      return res.status(405).json({ message: "Method not allowed" });
+    }
+
+    return handleLogin({
+      context: null,
+      req,
+      res,
+    });
+  }
+
+  return handleLogin({
+    context: arg1,
+    req: arg2,
+  });
 };
