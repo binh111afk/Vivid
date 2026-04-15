@@ -372,6 +372,10 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
   const scrollRef = useRef<HTMLDivElement>(null);
   const activePhoto = photos.find((item: any) => item.id === activePhotoId) ?? photos[0];
   const liked = likedPhotoIds.includes(activePhoto.id);
+  const actionBoxHeight = 92;
+  const actionBoxBottomOffset = 50;
+  const cardToActionGap = -34;
+  const scrollViewportBottom = actionBoxHeight + actionBoxBottomOffset + cardToActionGap;
 
   useEffect(() => {
     const container = scrollRef.current;
@@ -434,14 +438,16 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
 
   return (
     <div className="relative h-full overflow-hidden">
-      <div className="pointer-events-none absolute left-0 right-0 top-0 z-10 h-24" style={{
-        background: 'linear-gradient(to bottom, rgba(248, 239, 227, 0.94), rgba(248, 239, 227, 0))'
-      }} />
-
       <div
         ref={scrollRef}
-        className="h-full overflow-y-auto snap-y snap-mandatory px-3 pb-40"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className="absolute inset-x-0 top-0 overflow-y-auto snap-y snap-mandatory px-4"
+        style={{
+          bottom: `${scrollViewportBottom}px`,
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          overscrollBehavior: 'contain',
+          paddingTop: '1.5rem',
+        }}
       >
         {photos.map((photo: any, index: number) => {
           const isActive = photo.id === activePhoto.id;
@@ -450,7 +456,7 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
             <section
               key={photo.id}
               data-home-photo-id={photo.id}
-              className="snap-center min-h-full flex items-center justify-center py-5"
+              className="snap-center h-full flex items-start justify-center overflow-hidden"
             >
               <motion.article
                 initial={{ opacity: 0, y: 28 }}
@@ -460,7 +466,7 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
                   scale: isActive ? 1 : 0.92
                 }}
                 transition={{ delay: index * 0.05, duration: 0.28 }}
-                className="relative w-full max-w-[350px]"
+                className="relative mt-8 w-full max-w-[332px]"
               >
                 <div
                   className="relative aspect-[4/5] overflow-hidden rounded-[2rem] shadow-2xl"
@@ -511,9 +517,6 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
                       </div>
                       <div>
                         <p className="text-lg font-semibold" style={{ color: 'var(--tet-cream)' }}>{photo.name}</p>
-                        <p className="text-sm" style={{ color: 'rgba(248, 239, 227, 0.82)' }}>
-                          Gửi ảnh cho gia đình
-                        </p>
                       </div>
                     </div>
 
@@ -538,38 +541,30 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
         })}
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-5">
+      <div
+        className="pointer-events-none absolute inset-x-0 z-10 mx-auto w-full max-w-[332px]"
+        style={{
+          bottom: `${actionBoxHeight + actionBoxBottomOffset - 8}px`,
+          height: '1px',
+          background: 'linear-gradient(90deg, rgba(161, 45, 58, 0), rgba(161, 45, 58, 0.34), rgba(161, 45, 58, 0))'
+        }}
+      />
+
+      <div
+        className="pointer-events-none absolute inset-x-0 z-20 px-5"
+        style={{ bottom: `${actionBoxBottomOffset}px` }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          className="pointer-events-auto rounded-[1.75rem] px-4 py-4 shadow-2xl"
+          className="pointer-events-auto mx-auto flex h-[92px] w-full max-w-[332px] items-center rounded-[1.75rem] px-4 shadow-2xl"
           style={{
             background: 'rgba(248, 239, 227, 0.94)',
             border: '1px solid rgba(161, 45, 58, 0.14)',
             backdropFilter: 'blur(14px)'
           }}
         >
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--tet-red)', opacity: 0.72 }}>
-                Bảng ảnh gia đình
-              </p>
-              <p className="text-base font-semibold" style={{ color: 'var(--tet-black)' }}>
-                {activePhoto.name} đang ở trung tâm feed
-              </p>
-            </div>
-            <div
-              className="rounded-full px-3 py-1 text-xs font-medium"
-              style={{
-                background: 'rgba(161, 45, 58, 0.08)',
-                color: 'var(--tet-red)'
-              }}
-            >
-              Vuốt lên xuống để xem thêm
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
+          <div className="flex w-full items-center gap-3">
             <motion.button
               whileTap={{ scale: 0.94 }}
               onClick={() => onLike(activePhoto.id)}
@@ -587,7 +582,7 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={onCameraClick}
-              className="flex-1 rounded-full px-5 py-3 flex items-center justify-center gap-2 shadow-lg transition-all"
+              className="flex-1 rounded-full px-4 py-3 flex items-center justify-center gap-2 whitespace-nowrap shadow-lg transition-all"
               style={{
                 background: 'white',
                 border: '2px solid var(--tet-red)',
