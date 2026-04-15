@@ -1,6 +1,6 @@
 const connectToDatabase = require("../lib/db");
 const { getBearerToken, verifyAccessToken } = require("../lib/auth");
-const { uploadImageFromDataUrl } = require("../lib/storage");
+const { uploadImageFromDataUrl, ensureReadableImageUrl } = require("../lib/storage");
 const FeedPost = require("../models/FeedPost");
 const User = require("../models/User");
 
@@ -71,7 +71,7 @@ async function handleGetFeed(target) {
         username: post.username,
         displayName: post.displayName,
         avatar: post.avatar,
-        photo: post.photo,
+        photo: ensureReadableImageUrl(post.photo),
         caption: post.caption,
         recipientIds: post.recipientIds,
         createdAt: post.createdAt,
@@ -146,7 +146,7 @@ async function handleCreateFeedPost(target) {
         username: post.username,
         displayName: post.displayName,
         avatar: post.avatar,
-        photo: post.photo,
+        photo: ensureReadableImageUrl(post.photo),
         caption: post.caption,
         recipientIds: post.recipientIds,
         createdAt: post.createdAt,
