@@ -1,6 +1,6 @@
 const connectToDatabase = require("../lib/db");
 const { getBearerToken, verifyAccessToken } = require("../lib/auth");
-const { uploadImageFromDataUrl, ensureReadableImageUrl } = require("../lib/storage");
+const { uploadImageFromDataUrl, ensureReadableImageUrl, deleteImageByUrl } = require("../lib/storage");
 const FeedPost = require("../models/FeedPost");
 const User = require("../models/User");
 
@@ -161,6 +161,63 @@ async function handleCreateFeedPost(target) {
   }
 }
 
+async function handleDeleteFeedPost(target) {
+  const logger = createLogger(target.context);
+
+  try {
+    logger.info("[Feed] Delete feed post request received");
+    const authUsername = getAuthenticatedUsername(target.req);
+
+    if (!authUsername) {
+      return sendResponse(target, 401, {
+        message: "Thiếu hoặc sai token xác thực.",
+      });
+    }
+
+    await connectToDatabase();
+
+    const requestBody = target.req?.body || {};
+    const postIdRaw = requestBody.postId ?? requestBody.id;
+    const postId = Number(postIdRaw);
+
+    if (!Number.isFinite(postId)) {
+      return sendResponse(target, 400, {
+        message: "Thiếu postId hợp lệ để xóa ảnh.",
+      });
+    }
+
+    const post = await FeedPost.findOne({ feedId: postId });
+
+    if (!post) {
+      return sendResponse(target, 404, {
+        message: "Không tìm thấy ảnh để xóa.",
+      });
+    }
+
+    if (post.username !== authUsername) {
+      return sendResponse(target, 403, {
+        message: "Bạn chỉ có thể xóa ảnh do chính bạn đăng.",
+      });
+    }
+
+    await deleteImageByUrl(post.photo);
+    await FeedPost.deleteOne({ _id: post._id });
+
+    logger.info("[Feed] Feed post deleted", { feedId: post.feedId, username: authUsername });
+
+    return sendResponse(target, 200, {
+      message: "Đã xóa ảnh khỏi feed.",
+      deletedId: post.feedId,
+    });
+  } catch (error) {
+    logger.error("[Feed] Error while deleting post", error);
+    return sendResponse(target, 500, {
+      message: "Không thể xóa ảnh lúc này.",
+      detail: error?.message || "Unknown feed delete error",
+    });
+  }
+}
+
 async function handleFeed(target) {
   const method = target.req?.method || "";
 
@@ -170,6 +227,10 @@ async function handleFeed(target) {
 
   if (method === "POST") {
     return handleCreateFeedPost(target);
+  }
+
+  if (method === "DELETE") {
+    return handleDeleteFeedPost(target);
   }
 
   return sendResponse(target, 405, {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Home, Camera, Users, Heart, History, TrendingUp, Lock, Globe, X, Copy, Check } from 'lucide-react';
+import { Home, Camera, Users, Heart, History, TrendingUp, Lock, Globe, X, Copy, Check, Trash2 } from 'lucide-react';
 import UserAuth from './components/UserAuth.jsx';
 import AuthPage, { useAuth } from './components/AuthPage.jsx';
 import AccountPage from './components/AccountPage.jsx';
@@ -228,6 +228,7 @@ export default function App() {
 
   const handleCapture = (imageData: string) => {
     setCapturedImage(imageData);
+    setSelectedRecipients(friends.map((friend: any) => friend.id));
   };
 
   const handleSend = async () => {
@@ -303,6 +304,37 @@ export default function App() {
     setLikedPhotoIds((prev) =>
       prev.includes(id) ? prev.filter((photoId) => photoId !== id) : [...prev, id]
     );
+  };
+
+  const handleDeleteFeedPhoto = async (photoId: number) => {
+    if (!user?.token) {
+      throw new Error('Phiên đăng nhập đã cũ hoặc hết hạn. Vui lòng đăng nhập lại.');
+    }
+
+    const response = await fetch('/api/feed', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({ postId: photoId }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      const detail = payload?.detail ? `\nChi tiết: ${payload.detail}` : '';
+      throw new Error((payload?.message || 'Không thể xóa ảnh.') + detail);
+    }
+
+    setFeedPhotos((prev) => {
+      const nextPhotos = prev.filter((item: any) => item.id !== photoId);
+
+      if (currentHomePhotoId === photoId) {
+        setCurrentHomePhotoId(nextPhotos[0]?.id ?? friends[0].id);
+      }
+
+      return nextPhotos;
+    });
   };
 
   useEffect(() => {
@@ -417,10 +449,12 @@ export default function App() {
                   >
                     <HomeScreen
                       photos={feedPhotos}
+                      currentUsername={user?.username || ''}
                       activePhotoId={currentHomePhotoId}
                       likedPhotoIds={likedPhotoIds}
                       onActivePhotoChange={setCurrentHomePhotoId}
                       onLike={toggleHomeLike}
+                      onDeletePhoto={handleDeleteFeedPhoto}
                       onCameraClick={() => setShowCamera(true)}
                     />
                   </motion.div>
@@ -608,8 +642,11 @@ export default function App() {
   );
 }
 
-function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange, onLike, onCameraClick }: any) {
+function HomeScreen({ photos, currentUsername, activePhotoId, likedPhotoIds, onActivePhotoChange, onLike, onDeletePhoto, onCameraClick }: any) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const [deletePromptPhotoId, setDeletePromptPhotoId] = useState<number | null>(null);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<number | null>(null);
   const activePhoto = photos.find((item: any) => item.id === activePhotoId) ?? photos[0];
   const liked = likedPhotoIds.includes(activePhoto.id);
   const actionBoxHeight = 92;
@@ -676,6 +713,50 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
     };
   }, [activePhotoId, onActivePhotoChange]);
 
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        window.clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
+
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const startLongPress = (photo: any, isActive: boolean) => {
+    const isOwnActivePhoto = isActive && Boolean(currentUsername) && photo.username === currentUsername;
+    if (!isOwnActivePhoto) {
+      return;
+    }
+
+    clearLongPressTimer();
+    longPressTimerRef.current = window.setTimeout(() => {
+      setDeletePromptPhotoId(photo.id);
+    }, 560);
+  };
+
+  const handleDeletePhoto = async (photo: any) => {
+    if (deletingPhotoId) {
+      return;
+    }
+
+    setDeletingPhotoId(photo.id);
+
+    try {
+      await onDeletePhoto(photo.id);
+      setDeletePromptPhotoId(null);
+    } catch (error: any) {
+      alert(error?.message || 'Không thể xóa ảnh lúc này.');
+    } finally {
+      setDeletingPhotoId(null);
+    }
+  };
+
   return (
     <div className="relative h-full overflow-hidden">
       <div
@@ -691,6 +772,8 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
       >
         {photos.map((photo: any, index: number) => {
           const isActive = photo.id === activePhoto.id;
+          const isOwnActivePhoto = isActive && Boolean(currentUsername) && photo.username === currentUsername;
+          const showDeletePrompt = deletePromptPhotoId === photo.id && isOwnActivePhoto;
 
           return (
             <section
@@ -710,6 +793,12 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
               >
                 <div
                   className="relative aspect-[4/5] overflow-hidden rounded-[2rem] shadow-2xl"
+                  onMouseDown={() => startLongPress(photo, isActive)}
+                  onMouseUp={clearLongPressTimer}
+                  onMouseLeave={clearLongPressTimer}
+                  onTouchStart={() => startLongPress(photo, isActive)}
+                  onTouchEnd={clearLongPressTimer}
+                  onTouchCancel={clearLongPressTimer}
                   style={{
                     border: isActive ? '4px solid var(--tet-gold)' : '2px solid rgba(200, 160, 90, 0.45)',
                     boxShadow: isActive
@@ -722,6 +811,29 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
                   <div className="absolute inset-0" style={{
                     background: 'linear-gradient(to top, rgba(47, 23, 21, 0.82) 0%, rgba(47, 23, 21, 0.08) 46%, rgba(47, 23, 21, 0.18) 100%)'
                   }} />
+
+                  {showDeletePrompt && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center">
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeletePhoto(photo);
+                        }}
+                        disabled={Boolean(deletingPhotoId)}
+                        className="inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold shadow-2xl"
+                        style={{
+                          background: 'rgba(161, 45, 58, 0.92)',
+                          border: '2px solid var(--tet-gold)',
+                          color: 'var(--tet-cream)',
+                          opacity: deletingPhotoId ? 0.8 : 1,
+                        }}
+                      >
+                        <Trash2 size={18} />
+                        {deletingPhotoId ? 'Đang xóa...' : 'Xóa ảnh'}
+                      </motion.button>
+                    </div>
+                  )}
 
                   <div className="absolute left-5 right-5 top-5 flex items-center justify-between">
                     <div

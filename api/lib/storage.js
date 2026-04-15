@@ -126,6 +126,35 @@ function buildSignedBlobUrlFromRawUrl(rawUrl, config) {
   return withSasUrl(rawUrl, sasToken);
 }
 
+function extractBlobAddressFromUrl(rawUrl, config) {
+  if (typeof rawUrl !== "string" || !rawUrl.trim()) {
+    return null;
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+
+  if (!parsed.hostname.includes(`${config.accountName}.blob.`)) {
+    return null;
+  }
+
+  const segments = parsed.pathname.split("/").filter(Boolean);
+  const [containerName, ...blobParts] = segments;
+
+  if (!containerName || !blobParts.length || containerName !== config.containerName) {
+    return null;
+  }
+
+  return {
+    containerName,
+    blobName: blobParts.join("/"),
+  };
+}
+
 async function uploadImageFromDataUrl(dataUrl, options = {}) {
   if (typeof dataUrl !== "string" || !dataUrl.trim()) {
     throw new Error("Thiếu dữ liệu ảnh để tải lên storage.");
@@ -167,7 +196,28 @@ function ensureReadableImageUrl(url) {
   }
 }
 
+async function deleteImageByUrl(rawUrl) {
+  try {
+    const config = getStorageConfig();
+    const blobAddress = extractBlobAddressFromUrl(rawUrl, config);
+
+    if (!blobAddress) {
+      return false;
+    }
+
+    const blobServiceClient = BlobServiceClient.fromConnectionString(config.connectionString);
+    const containerClient = blobServiceClient.getContainerClient(blobAddress.containerName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobAddress.blobName);
+
+    await blockBlobClient.deleteIfExists();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 module.exports = {
   uploadImageFromDataUrl,
   ensureReadableImageUrl,
+  deleteImageByUrl,
 };
