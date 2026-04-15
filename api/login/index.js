@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 
 const connectToDatabase = require("../lib/db");
+const { signAccessToken } = require("../lib/auth");
 const User = require("../models/User");
 
 function createLogger(context) {
@@ -68,6 +69,7 @@ async function handleLogin(target) {
     }
 
     logger.info("[Login] Login successful", { userId: user._id.toString() });
+    const token = signAccessToken(user);
 
     return sendResponse(target, 200, {
       user: {
@@ -75,6 +77,7 @@ async function handleLogin(target) {
         username: user.username,
         displayName: user.displayName,
         avatar: user.avatar,
+        token,
       },
     });
   } catch (error) {

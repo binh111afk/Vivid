@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 
 const connectToDatabase = require("../lib/db");
+const { signAccessToken } = require("../lib/auth");
 const User = require("../models/User");
 
 function buildAvatar(displayName) {
@@ -80,6 +81,7 @@ async function handleRegister(target) {
       avatar: buildAvatar(displayName),
     });
     logger.info("[Register] User created successfully", { userId: user._id.toString() });
+    const token = signAccessToken(user);
 
     return sendResponse(target, 201, {
       user: {
@@ -87,6 +89,7 @@ async function handleRegister(target) {
         username: user.username,
         displayName: user.displayName,
         avatar: user.avatar,
+        token,
       },
     });
   } catch (error) {

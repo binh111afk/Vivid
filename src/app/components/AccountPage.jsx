@@ -231,7 +231,7 @@ export default function AccountPage({ onBack = () => {} }) {
               <p className="truncate text-xl font-semibold text-[#800020]">{user.displayName || user.username}</p>
               <p className="mt-1 text-sm text-[rgba(54,24,18,0.7)]">@{user.username}</p>
               <p className="mt-2 text-xl font-semibold text-[#800020]">
-                Trung tâm quản lý tài khoản
+                Quản lý tài khoản
               </p>
             </div>
           </div>

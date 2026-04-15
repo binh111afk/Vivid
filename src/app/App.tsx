@@ -107,7 +107,7 @@ function AuthGate() {
           </p>
         </div>
 
-        <AuthPage />
+        <AuthPage onSuccess={() => {}} />
       </div>
     </div>
   );
@@ -137,6 +137,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  const { user } = useAuth() as any;
   const [activeTab, setActiveTab] = useState<'home' | 'history' | 'summary' | 'friends' | 'account'>('home');
   const [showNotification, setShowNotification] = useState(false);
   const [likedPhotoIds, setLikedPhotoIds] = useState<number[]>([]);
@@ -145,13 +146,15 @@ export default function App() {
   const [summaryFilter, setSummaryFilter] = useState<'week' | 'month'>('week');
   const [summaryView, setSummaryView] = useState<'personal' | 'feed'>('personal');
   const [showCamera, setShowCamera] = useState(false);
+  const [isSendingPost, setIsSendingPost] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [selectedRecipients, setSelectedRecipients] = useState<number[]>([]);
   const [caption, setCaption] = useState('');
   const [showInvitePopup, setShowInvitePopup] = useState(false);
+  const [feedPhotos, setFeedPhotos] = useState(friends);
   const [currentHomePhotoId, setCurrentHomePhotoId] = useState(friends[0].id);
 
-  const latestPhoto = friends.find((friend) => friend.id === currentHomePhotoId) ?? friends[0];
+  const latestPhoto = feedPhotos.find((friend) => friend.id === currentHomePhotoId) ?? feedPhotos[0] ?? friends[0];
   const deviceFrameStyle = {
     background: 'var(--tet-cream)',
     width: 'min(390px, calc(100vw - 1rem), calc((100dvh - 1rem) * 390 / 844))',
@@ -159,17 +162,115 @@ export default function App() {
     aspectRatio: '390 / 844',
   } as const;
 
+  const formatFeedTimestamp = (value: string) => {
+    const createdAt = new Date(value);
+    const diffMs = Date.now() - createdAt.getTime();
+
+    if (Number.isNaN(createdAt.getTime()) || diffMs < 0) {
+      return 'Vừa xong';
+    }
+
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) {
+      return 'Vừa xong';
+    }
+    if (minutes < 60) {
+      return `${minutes} phút trước`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+      return `${hours} giờ trước`;
+    }
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) {
+      return `${days} ngày trước`;
+    }
+
+    return createdAt.toLocaleDateString('vi-VN');
+  };
+
+  const mapFeedItem = (post: any) => ({
+    id: Number(post?.id ?? Date.now()),
+    username: post?.username || '',
+    name: post?.displayName || post?.username || 'Vivid User',
+    avatar: post?.avatar || 'https://ui-avatars.com/api/?name=Vivid+User&background=800020&color=FFFDD0&bold=true',
+    photo: post?.photo || '',
+    online: true,
+    timestamp: formatFeedTimestamp(post?.createdAt || new Date().toISOString()),
+    caption: post?.caption || '',
+    createdAt: post?.createdAt || new Date().toISOString(),
+  });
+
+  const historyPhotos = feedPhotos.map((photo: any) => {
+    const createdAt = new Date(photo.createdAt || new Date().toISOString());
+    const isCurrentUser = Boolean(user?.username) && photo.username === user.username;
+
+    return {
+      id: photo.id,
+      photo: photo.photo,
+      sender: photo.name,
+      photographer: isCurrentUser ? 'Bạn' : photo.name,
+      date: createdAt.toISOString().slice(0, 10),
+      time: createdAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      caption: photo.caption,
+    };
+  });
+
+  const historyFriends = Array.from(
+    new Map(
+      feedPhotos
+        .filter((photo: any) => !(Boolean(user?.username) && photo.username === user.username))
+        .map((photo: any) => [photo.name, { id: photo.id, name: photo.name, avatar: photo.avatar }]),
+    ).values(),
+  );
+
   const handleCapture = (imageData: string) => {
     setCapturedImage(imageData);
   };
 
-  const handleSend = () => {
-    setShowNotification(true);
-    setTimeout(() => setShowNotification(false), 3000);
-    setCapturedImage(null);
-    setCaption('');
-    setSelectedRecipients([]);
-    setShowCamera(false);
+  const handleSend = async () => {
+    if (!capturedImage || !user?.username || !user?.token || isSendingPost) {
+      return;
+    }
+
+    setIsSendingPost(true);
+
+    try {
+      const response = await fetch('/api/feed', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          photo: capturedImage,
+          caption: caption.trim(),
+          recipientIds: selectedRecipients,
+        }),
+      });
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.message || 'Không thể đăng ảnh lên feed.');
+      }
+
+      const newFeedCard = mapFeedItem(payload?.post || {});
+      setFeedPhotos((prev) => [newFeedCard, ...prev]);
+      setCurrentHomePhotoId(newFeedCard.id);
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      setCapturedImage(null);
+      setCaption('');
+      setSelectedRecipients([]);
+      setShowCamera(false);
+    } catch (error: any) {
+      alert(error?.message || 'Có lỗi xảy ra khi gửi ảnh.');
+    } finally {
+      setIsSendingPost(false);
+    }
   };
 
   const toggleRecipient = (id: number) => {
@@ -192,6 +293,60 @@ export default function App() {
       clearTimeout(hideTimer);
     };
   }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadFeed = async () => {
+      if (!user?.token) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/feed', {
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+          },
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json();
+        const posts = Array.isArray(payload?.posts) ? payload.posts : [];
+
+        if (!posts.length || ignore) {
+          return;
+        }
+
+        const mapped = posts.map(mapFeedItem).filter((item: any) => Boolean(item.photo));
+
+        if (!mapped.length || ignore) {
+          return;
+        }
+
+        setFeedPhotos(mapped);
+        setCurrentHomePhotoId(mapped[0].id);
+      } catch (error) {
+        console.warn('Không thể tải feed từ máy chủ.', error);
+      }
+    };
+
+    loadFeed();
+
+    return () => {
+      ignore = true;
+    };
+  }, [user?.token]);
+
+  useEffect(() => {
+    const validNames = new Set(['Bạn', ...historyFriends.map((friend: any) => friend.name)]);
+
+    if (!validNames.has(selectedFriend)) {
+      setSelectedFriend('Bạn');
+    }
+  }, [historyFriends, selectedFriend]);
 
   return (
     <ProtectedRoute>
@@ -241,7 +396,7 @@ export default function App() {
                     className="h-full"
                   >
                     <HomeScreen
-                      photos={friends}
+                      photos={feedPhotos}
                       activePhotoId={currentHomePhotoId}
                       likedPhotoIds={likedPhotoIds}
                       onActivePhotoChange={setCurrentHomePhotoId}
@@ -259,10 +414,10 @@ export default function App() {
                     className="h-full"
                   >
                     <HistoryScreen
-                      photos={photoHistory}
+                      photos={historyPhotos}
                       filter={historyFilter}
                       onFilterChange={setHistoryFilter}
-                      friends={friends}
+                      friends={historyFriends}
                       selectedFriend={selectedFriend}
                       onFriendChange={setSelectedFriend}
                     />
@@ -384,6 +539,7 @@ export default function App() {
                   capturedImage={capturedImage}
                   onCapture={handleCapture}
                   onSend={handleSend}
+                  isSendingPost={isSendingPost}
                   friends={friends}
                   selectedRecipients={selectedRecipients}
                   onToggleRecipient={toggleRecipient}
@@ -662,7 +818,7 @@ function HomeScreen({ photos, activePhotoId, likedPhotoIds, onActivePhotoChange,
   );
 }
 
-function CameraScreen({ capturedImage, onCapture, onSend, friends, selectedRecipients, onToggleRecipient, caption, onCaptionChange, onBack }: any) {
+function CameraScreen({ capturedImage, onCapture, onSend, isSendingPost, friends, selectedRecipients, onToggleRecipient, caption, onCaptionChange, onBack }: any) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -872,16 +1028,16 @@ function CameraScreen({ capturedImage, onCapture, onSend, friends, selectedRecip
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={onSend}
-          disabled={selectedRecipients.length === 0}
+          disabled={selectedRecipients.length === 0 || isSendingPost}
           className="flex-1 py-4 rounded-full font-medium shadow-lg transition-opacity"
           style={{
-            background: selectedRecipients.length > 0 ? 'var(--tet-red)' : '#ccc',
+            background: selectedRecipients.length > 0 && !isSendingPost ? 'var(--tet-red)' : '#ccc',
             border: '2px solid var(--tet-gold)',
             color: 'var(--tet-cream)',
-            opacity: selectedRecipients.length > 0 ? 1 : 0.5
+            opacity: selectedRecipients.length > 0 && !isSendingPost ? 1 : 0.5
           }}
         >
-          Gửi
+          {isSendingPost ? 'Đang gửi...' : 'Gửi'}
         </motion.button>
       </div>
     </div>
@@ -891,8 +1047,9 @@ function CameraScreen({ capturedImage, onCapture, onSend, friends, selectedRecip
 function HistoryScreen({ photos, filter, onFilterChange, friends, selectedFriend, onFriendChange }: any) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const today = new Date('2026-04-14');
-    const yesterday = new Date('2026-04-13');
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) {
       return 'Hôm nay';

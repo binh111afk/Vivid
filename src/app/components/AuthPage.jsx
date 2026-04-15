@@ -108,6 +108,17 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const mergeToken = (nextUser) => {
+    if (!nextUser) {
+      return nextUser;
+    }
+
+    return {
+      ...nextUser,
+      token: nextUser.token || user?.token || "",
+    };
+  };
+
   useEffect(() => {
     const storedUser = readStoredUser();
     console.log("[Auth] Restoring user from localStorage", storedUser);
@@ -117,29 +128,32 @@ export function AuthProvider({ children }) {
 
   const login = async ({ username, password }) => {
     const payload = await requestAuth("/api/login", { username, password });
+    const nextUser = mergeToken(payload.user);
 
-    persistUser(payload.user);
-    setUser(payload.user);
-    console.log("[Auth] Login successful", payload.user);
-    return payload.user;
+    persistUser(nextUser);
+    setUser(nextUser);
+    console.log("[Auth] Login successful", nextUser);
+    return nextUser;
   };
 
   const register = async ({ username, password, displayName }) => {
     const payload = await requestAuth("/api/register", { username, password, displayName });
+    const nextUser = mergeToken(payload.user);
 
-    persistUser(payload.user);
-    setUser(payload.user);
-    console.log("[Auth] Register successful", payload.user);
-    return payload.user;
+    persistUser(nextUser);
+    setUser(nextUser);
+    console.log("[Auth] Register successful", nextUser);
+    return nextUser;
   };
 
   const updateProfile = async ({ username, displayName, avatar }) => {
     const payload = await requestAuth("/api/profile", { username, displayName, avatar });
+    const nextUser = mergeToken(payload.user);
 
-    persistUser(payload.user);
-    setUser(payload.user);
-    console.log("[Auth] Profile updated successfully", payload.user);
-    return payload.user;
+    persistUser(nextUser);
+    setUser(nextUser);
+    console.log("[Auth] Profile updated successfully", nextUser);
+    return nextUser;
   };
 
   const changePassword = async ({ username, currentPassword, newPassword }) => {
