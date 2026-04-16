@@ -27,7 +27,16 @@ const photoHistory = [
   { id: 10, photo: 'https://picsum.photos/400/400?random=20', sender: 'Chị Mai', photographer: 'Chị Mai', date: '2026-03-25', time: '17:15', caption: 'Tết đến rồi!' },
 ];
 
-const summaries = [
+const mockSummaries = [
+  {
+    id: 0,
+    type: 'day',
+    period: 'Ngày 16/04/2026',
+    author: 'Bạn',
+    content: 'Hôm nay bạn đã chụp ảnh và ghi chú rất đều đặn. Tiếp tục duy trì thói quen tốt này nhé! 🌟',
+    isPublic: true,
+    date: '2026-04-16'
+  },
   {
     id: 1,
     type: 'week',
@@ -143,7 +152,7 @@ export default function App() {
   const [likedPhotoIds, setLikedPhotoIds] = useState<number[]>([]);
   const [historyFilter, setHistoryFilter] = useState<'day' | 'week' | 'month'>('day');
   const [selectedFriend, setSelectedFriend] = useState<string>('Bạn');
-  const [summaryFilter, setSummaryFilter] = useState<'week' | 'month'>('week');
+  const [summaryFilter, setSummaryFilter] = useState<'day' | 'week' | 'month'>('day');
   const [summaryView, setSummaryView] = useState<'personal' | 'feed'>('personal');
   const [showCamera, setShowCamera] = useState(false);
   const [isSendingPost, setIsSendingPost] = useState(false);
@@ -152,6 +161,7 @@ export default function App() {
   const [caption, setCaption] = useState('');
   const [showInvitePopup, setShowInvitePopup] = useState(false);
   const [feedPhotos, setFeedPhotos] = useState<any[]>(friends);
+  const [summaryItems, setSummaryItems] = useState<any[]>(mockSummaries);
   const [currentHomePhotoId, setCurrentHomePhotoId] = useState(friends[0].id);
 
   const latestPhoto = feedPhotos.find((friend) => friend.id === currentHomePhotoId) ?? feedPhotos[0] ?? friends[0];
@@ -232,6 +242,84 @@ export default function App() {
       return mapped;
     } catch (error) {
       console.warn('Không thể tải feed từ máy chủ.', error);
+      return [];
+    }
+  };
+
+  const loadSummariesFromServer = async () => {
+    if (!user?.token) {
+      return [];
+    }
+
+    try {
+      const response = await fetch(`/api/summaries?t=${Date.now()}`, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`Summaries API error: ${response.status} - ${errText}`);
+      }
+
+      const payload = await response.json();
+      const rows = Array.isArray(payload?.summaries) ? payload.summaries : [];
+
+      const toVnDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        if (Number.isNaN(date.getTime())) {
+          return dateStr;
+        }
+        return date.toLocaleDateString('vi-VN');
+      };
+
+      const toPeriod = (item: any) => {
+        const type = item?.type;
+        const dateString = String(item?.dateString || '');
+
+        if (type === 'day') {
+          return `Ngày ${toVnDate(dateString)}`;
+        }
+
+        if (type === 'week') {
+          const weekMatch = dateString.match(/^(\d{4})-W(\d{1,2})$/);
+          if (weekMatch) {
+            return `Tuần ${weekMatch[2]} - ${weekMatch[1]}`;
+          }
+          return dateString ? `Tuần ${dateString}` : 'Tổng kết tuần';
+        }
+
+        if (type === 'month') {
+          const monthMatch = dateString.match(/^(\d{4})-(\d{1,2})$/);
+          if (monthMatch) {
+            return `Tháng ${monthMatch[2]} - ${monthMatch[1]}`;
+          }
+          return dateString ? `Tháng ${dateString}` : 'Tổng kết tháng';
+        }
+
+        return 'Tổng kết';
+      };
+
+      const mapped = rows
+        .map((item: any, index: number) => ({
+          id: Number(item?.id) || Date.now() + index,
+          type: item?.type,
+          period: toPeriod(item),
+          author: 'Bạn',
+          content: item?.text || '',
+          isPublic: true,
+          date: String(item?.dateString || ''),
+        }))
+        .filter((item: any) => ['day', 'week', 'month'].includes(item.type) && Boolean(item.content));
+
+      if (mapped.length > 0) {
+        setSummaryItems(mapped);
+      }
+
+      return mapped;
+    } catch (error) {
+      console.warn('Không thể tải tổng kết từ máy chủ.', error);
       return [];
     }
   };
@@ -370,13 +458,9 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    let ignore = false;
-
     loadFeedFromServer();
+    loadSummariesFromServer();
 
-    return () => {
-      ignore = true;
-    };
   }, [user?.token]);
 
   useEffect(() => {
@@ -473,7 +557,7 @@ export default function App() {
                     className="h-full"
                   >
                     <SummaryScreen
-                      summaries={summaries}
+                      summaries={summaryItems}
                       filter={summaryFilter}
                       onFilterChange={setSummaryFilter}
                       view={summaryView}
@@ -1415,6 +1499,11 @@ function SummaryScreen({ summaries, filter, onFilterChange, view, onViewChange }
 
       {/* Time filter buttons */}
       <div className="flex gap-2 mb-6">
+        <FilterButton
+          label="Ngày"
+          active={filter === 'day'}
+          onClick={() => onFilterChange('day')}
+        />
         <FilterButton
           label="Tuần"
           active={filter === 'week'}
