@@ -70,7 +70,7 @@ async function handleGetFeed(target) {
     await connectToDatabase();
 
     const posts = await FeedPost.find({})
-      .sort({ createdAt: -1 })
+      .sort({ _id: -1 })
       .limit(100)
       .lean();
 
