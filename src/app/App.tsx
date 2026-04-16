@@ -96,6 +96,7 @@ export default function App() {
   const [showInvitePopup, setShowInvitePopup] = useState(false);
   const [feedPhotos, setFeedPhotos] = useState<any[]>(friends);
   const [summaryItems, setSummaryItems] = useState<any[]>([]);
+  const [isLoadingSummaries, setIsLoadingSummaries] = useState(false);
   const [currentHomePhotoId, setCurrentHomePhotoId] = useState(friends[0].id);
 
   const latestPhoto = feedPhotos.find((friend) => friend.id === currentHomePhotoId) ?? feedPhotos[0] ?? friends[0];
@@ -186,6 +187,7 @@ export default function App() {
       return [];
     }
 
+    setIsLoadingSummaries(true);
     try {
       const response = await fetch(`/api/summaries?t=${Date.now()}`, {
         headers: {
@@ -252,6 +254,8 @@ export default function App() {
       console.warn('Không thể tải tổng kết từ máy chủ.', error);
       setSummaryItems([]);
       return [];
+    } finally {
+      setIsLoadingSummaries(false);
     }
   };
 
@@ -299,6 +303,10 @@ export default function App() {
     }
 
     setIsSendingPost(true);
+    setShowCamera(false); // Hide camera to let user navigate while awaiting response
+    
+    // Auto-navigate to summary page to show the AI loading state
+    setActiveTab('summary');
 
     try {
       const response = await fetch('/api/feed', {
@@ -328,9 +336,9 @@ export default function App() {
       setCapturedImage(null);
       setCaption('');
       setSelectedRecipients([]);
-      setShowCamera(false);
     } catch (error: any) {
       alert(error?.message || 'Có lỗi xảy ra khi gửi ảnh.');
+      setShowCamera(true); // Bring camera back if it fails
     } finally {
       setIsSendingPost(false);
     }
@@ -490,6 +498,7 @@ export default function App() {
                   >
                     <SummaryScreen
                       summaries={summaryItems}
+                      isLoading={isLoadingSummaries || isSendingPost}
                       filter={summaryFilter}
                       onFilterChange={setSummaryFilter}
                       view={summaryView}
@@ -1381,7 +1390,7 @@ function FilterButton({ label, active, onClick }: any) {
   );
 }
 
-function SummaryScreen({ summaries, filter, onFilterChange, view, onViewChange }: any) {
+function SummaryScreen({ summaries, isLoading, filter, onFilterChange, view, onViewChange }: any) {
   const [publicStates, setPublicStates] = useState<{ [key: number]: boolean }>(
     summaries.reduce((acc: any, summary: any) => {
       acc[summary.id] = summary.isPublic;
@@ -1450,7 +1459,21 @@ function SummaryScreen({ summaries, filter, onFilterChange, view, onViewChange }
 
       {/* Summary cards */}
       <div className="space-y-4 pb-4">
-        {filteredSummaries.length === 0 ? (
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-3xl overflow-hidden shadow-lg p-5 flex flex-col items-center justify-center space-y-3"
+            style={{ background: 'var(--tet-cream)' }}
+          >
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: 'var(--tet-red)' }}></div>
+            <p style={{ color: 'var(--tet-red)', opacity: 0.8 }} className="animate-pulse font-medium text-sm">
+              Đang chờ AI nhận xét hoạt động mới nhất...
+            </p>
+          </motion.div>
+        )}
+        
+        {!isLoading && filteredSummaries.length === 0 ? (
           <div className="text-center py-12">
             <p style={{ color: 'var(--tet-red)', opacity: 0.6 }}>
               Chưa có tổng kết nào
