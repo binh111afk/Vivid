@@ -1,8 +1,8 @@
 const bcrypt = require("bcryptjs");
 
-const connectToDatabase = require("../lib/db");
-const { signAccessToken } = require("../lib/auth");
-const User = require("../models/User");
+const connectToDatabase = require("../../lib/db");
+const { signAccessToken } = require("../../lib/auth");
+const User = require("../../models/User");
 
 function buildAvatar(displayName) {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=800020&color=FFFDD0&bold=true`;

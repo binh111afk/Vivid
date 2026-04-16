@@ -1,6 +1,6 @@
-const connectToDatabase = require("../lib/db");
-const Summary = require("../models/Summary");
-const { getBearerToken, verifyAccessToken } = require("../lib/auth");
+const connectToDatabase = require("../../lib/db");
+const Summary = require("../../models/Summary");
+const { getBearerToken, verifyAccessToken } = require("../../lib/auth");
 
 function sendResponse(target, status, body) {
   if (target?.res && typeof target.res.status === "function") {

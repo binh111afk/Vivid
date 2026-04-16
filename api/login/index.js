@@ -1,8 +1,8 @@
 const bcrypt = require("bcryptjs");
 
-const connectToDatabase = require("../lib/db");
-const { signAccessToken } = require("../lib/auth");
-const User = require("../models/User");
+const connectToDatabase = require("../../lib/db");
+const { signAccessToken } = require("../../lib/auth");
+const User = require("../../models/User");
 
 function createLogger(context) {
   if (context?.log) {

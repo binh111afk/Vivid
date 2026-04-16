@@ -1,5 +1,5 @@
-const connectToDatabase = require("../lib/db");
-const User = require("../models/User");
+const connectToDatabase = require("../../lib/db");
+const User = require("../../models/User");
 
 function createLogger(context) {
   if (context?.log) {
