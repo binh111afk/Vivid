@@ -216,7 +216,8 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error(`Feed API error: ${response.status}`);
+        const errText = await response.text().catch(() => '');
+        throw new Error(`Feed API error: ${response.status} - ${errText}`);
       }
 
       const payload = await response.json();

@@ -26,14 +26,17 @@ function sendResponse(target, status, body) {
     return target.res.status(status).json(body);
   }
 
-  target.context.res = {
-    status,
-    headers: {
-      "Cache-Control": "no-store",
-    },
-    body,
-  };
-  return target.context.res;
+  if (target?.context) {
+    target.context.res = {
+      status,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+      body,
+    };
+    return target.context.res;
+  }
 }
 
 function getAuthenticatedUsername(req) {
