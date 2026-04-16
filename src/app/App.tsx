@@ -27,72 +27,6 @@ const photoHistory = [
   { id: 10, photo: 'https://picsum.photos/400/400?random=20', sender: 'Chị Mai', photographer: 'Chị Mai', date: '2026-03-25', time: '17:15', caption: 'Tết đến rồi!' },
 ];
 
-const mockSummaries = [
-  {
-    id: 0,
-    type: 'day',
-    period: 'Ngày 16/04/2026',
-    author: 'Bạn',
-    content: 'Hôm nay bạn đã chụp ảnh và ghi chú rất đều đặn. Tiếp tục duy trì thói quen tốt này nhé! 🌟',
-    isPublic: true,
-    date: '2026-04-16'
-  },
-  {
-    id: 1,
-    type: 'week',
-    period: 'Tuần 15 - Tháng 4',
-    author: 'Bạn',
-    content: 'Tuần này bạn đã lên thư viện 2 lần và hoàn thành 3 bài tập lớn. Bạn cũng đã chụp 8 ảnh gửi cho gia đình! 📚',
-    isPublic: true,
-    date: '2026-04-14'
-  },
-  {
-    id: 2,
-    type: 'week',
-    period: 'Tuần 14 - Tháng 4',
-    author: 'Bạn',
-    content: 'Chạy bộ 3 lần trong tuần, đạt kỷ lục cá nhân 5km. Tiếp tục phát huy! 🏃‍♂️',
-    isPublic: false,
-    date: '2026-04-07'
-  },
-  {
-    id: 3,
-    type: 'month',
-    period: 'Tháng 3 - 2026',
-    author: 'Bạn',
-    content: 'Tháng 3 bạn đã chạy bộ 10 lần, đọc xong 2 cuốn sách và đạt được thành tích học sinh giỏi! Xuất sắc! 🎉',
-    isPublic: true,
-    date: '2026-03-31'
-  },
-  {
-    id: 4,
-    type: 'week',
-    period: 'Tuần 15 - Tháng 4',
-    author: 'Mẹ',
-    content: 'Tuần này mẹ đã nấu 5 món ăn mới và chụp ảnh gửi cho các con mỗi ngày. Gia đình là số 1! 🍲',
-    isPublic: true,
-    date: '2026-04-14'
-  },
-  {
-    id: 5,
-    type: 'week',
-    period: 'Tuần 14 - Tháng 4',
-    author: 'Ba',
-    content: 'Sửa được cái máy tính cũ, đi chợ 3 lần trong tuần. Cuộc sống bình yên! 🔧',
-    isPublic: true,
-    date: '2026-04-07'
-  },
-  {
-    id: 6,
-    type: 'month',
-    period: 'Tháng 3 - 2026',
-    author: 'Bé Hà',
-    content: 'Tháng 3 em đã học xong 2 khóa học online và thi đỗ bằng lái xe! Tự hào quá! 🚗',
-    isPublic: true,
-    date: '2026-03-31'
-  },
-];
-
 function AuthGate() {
   return (
     <div
@@ -161,7 +95,7 @@ export default function App() {
   const [caption, setCaption] = useState('');
   const [showInvitePopup, setShowInvitePopup] = useState(false);
   const [feedPhotos, setFeedPhotos] = useState<any[]>(friends);
-  const [summaryItems, setSummaryItems] = useState<any[]>(mockSummaries);
+  const [summaryItems, setSummaryItems] = useState<any[]>([]);
   const [currentHomePhotoId, setCurrentHomePhotoId] = useState(friends[0].id);
 
   const latestPhoto = feedPhotos.find((friend) => friend.id === currentHomePhotoId) ?? feedPhotos[0] ?? friends[0];
@@ -248,6 +182,7 @@ export default function App() {
 
   const loadSummariesFromServer = async () => {
     if (!user?.token) {
+      setSummaryItems([]);
       return [];
     }
 
@@ -266,26 +201,23 @@ export default function App() {
       const payload = await response.json();
       const rows = Array.isArray(payload?.summaries) ? payload.summaries : [];
 
-      const toVnDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        if (Number.isNaN(date.getTime())) {
-          return dateStr;
-        }
-        return date.toLocaleDateString('vi-VN');
-      };
-
       const toPeriod = (item: any) => {
         const type = item?.type;
         const dateString = String(item?.dateString || '');
+        const createdAt = new Date(item?.createdAt || Date.now());
 
         if (type === 'day') {
-          return `Ngày ${toVnDate(dateString)}`;
+          const dayMatch = dateString.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+          if (dayMatch) {
+            return `Ngày ${Number(dayMatch[3])} tháng ${Number(dayMatch[2])}`;
+          }
+          return `Ngày ${dateString}`;
         }
 
         if (type === 'week') {
           const weekMatch = dateString.match(/^(\d{4})-W(\d{1,2})$/);
           if (weekMatch) {
-            return `Tuần ${weekMatch[2]} - ${weekMatch[1]}`;
+            return `Tuần ${Number(weekMatch[2])} tháng ${createdAt.getMonth() + 1}`;
           }
           return dateString ? `Tuần ${dateString}` : 'Tổng kết tuần';
         }
@@ -293,7 +225,7 @@ export default function App() {
         if (type === 'month') {
           const monthMatch = dateString.match(/^(\d{4})-(\d{1,2})$/);
           if (monthMatch) {
-            return `Tháng ${monthMatch[2]} - ${monthMatch[1]}`;
+            return `Tháng ${Number(monthMatch[2])} năm ${monthMatch[1]}`;
           }
           return dateString ? `Tháng ${dateString}` : 'Tổng kết tháng';
         }
@@ -313,13 +245,12 @@ export default function App() {
         }))
         .filter((item: any) => ['day', 'week', 'month'].includes(item.type) && Boolean(item.content));
 
-      if (mapped.length > 0) {
-        setSummaryItems(mapped);
-      }
+      setSummaryItems(mapped);
 
       return mapped;
     } catch (error) {
       console.warn('Không thể tải tổng kết từ máy chủ.', error);
+      setSummaryItems([]);
       return [];
     }
   };
@@ -391,6 +322,7 @@ export default function App() {
       }
 
       await loadFeedFromServer();
+      await loadSummariesFromServer();
       setShowNotification(true);
       setTimeout(() => setShowNotification(false), 3000);
       setCapturedImage(null);

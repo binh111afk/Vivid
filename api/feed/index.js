@@ -3,6 +3,10 @@ const { getBearerToken, verifyAccessToken } = require("../lib/auth");
 const { uploadImageFromDataUrl, ensureReadableImageUrl, deleteImageByUrl } = require("../lib/storage");
 const FeedPost = require("../models/FeedPost");
 const User = require("../models/User");
+const Summary = require("../models/Summary");
+const { generateCommentForDay, summarizePeriod } = require("../lib/ai");
+
+const APP_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Ho_Chi_Minh";
 
 function createLogger(context) {
   if (context?.log) {
@@ -54,6 +58,62 @@ function getAuthenticatedUsername(req) {
   }
 }
 
+function getZonedDate(now = new Date()) {
+  return new Date(now.toLocaleString("en-US", { timeZone: APP_TIMEZONE }));
+}
+
+function toDateKey(input) {
+  const date = input instanceof Date ? input : new Date(input);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toMonthKey(input) {
+  const date = input instanceof Date ? input : new Date(input);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function getIsoWeek(input) {
+  const date = new Date(input);
+  date.setHours(0, 0, 0, 0);
+  const day = date.getDay() || 7;
+  date.setDate(date.getDate() + 4 - day);
+  const yearStart = new Date(date.getFullYear(), 0, 1);
+  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return { year: date.getFullYear(), week: weekNo };
+}
+
+function toWeekKey(input) {
+  const { year, week } = getIsoWeek(input);
+  return `${year}-W${String(week).padStart(2, "0")}`;
+}
+
+function isEndOfWeek(input) {
+  const date = input instanceof Date ? input : new Date(input);
+  return date.getDay() === 0;
+}
+
+function isEndOfMonth(input) {
+  const date = input instanceof Date ? input : new Date(input);
+  const next = new Date(date);
+  next.setDate(date.getDate() + 1);
+  return next.getDate() === 1;
+}
+
+function getLastNDayKeys(zonedNow, days) {
+  const keys = [];
+  for (let i = 0; i < days; i += 1) {
+    const date = new Date(zonedNow);
+    date.setDate(zonedNow.getDate() - i);
+    keys.push(toDateKey(date));
+  }
+  return keys;
+}
+
 async function handleGetFeed(target) {
   const logger = createLogger(target.context);
 
@@ -92,6 +152,106 @@ async function handleGetFeed(target) {
       message: "Không thể tải feed lúc này.",
       detail: error?.message || "Unknown feed fetch error",
     });
+  }
+}
+
+async function handleAIBackgroundTasks(username, caption, logger) {
+  try {
+    const nowZoned = getZonedDate();
+    const dayKey = toDateKey(nowZoned);
+
+    const recentPosts = await FeedPost.find({ username })
+      .select({ caption: 1, createdAt: 1 })
+      .sort({ _id: -1 })
+      .limit(500)
+      .lean();
+
+    const todayPosts = recentPosts.filter((post) => {
+      const postZonedDate = getZonedDate(new Date(post.createdAt));
+      return toDateKey(postZonedDate) === dayKey;
+    });
+
+    const todayCaptions = todayPosts
+      .map((post) => (typeof post.caption === "string" ? post.caption.trim() : ""))
+      .filter(Boolean);
+
+    const daySummary = await generateCommentForDay({
+      username,
+      dateString: dayKey,
+      captions: todayCaptions,
+      photoCount: todayPosts.length,
+    });
+
+    if (daySummary) {
+      await Summary.findOneAndUpdate(
+        { username, type: "day", dateString: dayKey },
+        { $set: { content: daySummary } },
+        { upsert: true, new: true },
+      );
+      logger.info("[AI] Upserted day summary", { username, dayKey, photoCount: todayPosts.length });
+    }
+
+    if (isEndOfWeek(nowZoned)) {
+      const weekKey = toWeekKey(nowZoned);
+      const weekDayKeys = getLastNDayKeys(nowZoned, 7);
+      const daySummaries = await Summary.find({
+        username,
+        type: "day",
+        dateString: { $in: weekDayKeys },
+      })
+        .sort({ dateString: 1 })
+        .lean();
+
+      const weekComments = daySummaries.map((item) => item.content).filter(Boolean);
+      if (weekComments.length > 0) {
+        const weekSummary = await summarizePeriod({
+          comments: weekComments,
+          periodType: "week",
+          periodLabel: weekKey,
+        });
+
+        if (weekSummary) {
+          await Summary.findOneAndUpdate(
+            { username, type: "week", dateString: weekKey },
+            { $set: { content: weekSummary } },
+            { upsert: true, new: true },
+          );
+          logger.info("[AI] Upserted week summary", { username, weekKey });
+        }
+      }
+    }
+
+    if (isEndOfMonth(nowZoned)) {
+      const monthKey = toMonthKey(nowZoned);
+      const daySummaries = await Summary.find({
+        username,
+        type: "day",
+        dateString: { $regex: `^${monthKey}-` },
+      })
+        .sort({ dateString: 1 })
+        .lean();
+
+      const monthComments = daySummaries.map((item) => item.content).filter(Boolean);
+      if (monthComments.length > 0) {
+        const monthSummary = await summarizePeriod({
+          comments: monthComments,
+          periodType: "month",
+          periodLabel: monthKey,
+        });
+
+        if (monthSummary) {
+          await Summary.findOneAndUpdate(
+            { username, type: "month", dateString: monthKey },
+            { $set: { content: monthSummary } },
+            { upsert: true, new: true },
+          );
+          logger.info("[AI] Upserted month summary", { username, monthKey });
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error("[AI] Background task error:", error);
   }
 }
 
@@ -148,6 +308,8 @@ async function handleCreateFeedPost(target) {
     });
 
     logger.info("[Feed] Feed post created", { feedId: post.feedId, username });
+
+    await handleAIBackgroundTasks(username, caption, logger);
 
     return sendResponse(target, 201, {
       post: {

@@ -1,7 +1,6 @@
 const connectToDatabase = require("../lib/db");
 const Summary = require("../models/Summary");
 const { getBearerToken, verifyAccessToken } = require("../lib/auth");
-const User = require("../models/User");
 
 function sendResponse(target, status, body) {
   if (target?.res && typeof target.res.status === "function") {
@@ -29,7 +28,7 @@ function getAuthenticatedUsername(req) {
     const token = getBearerToken(req);
     if (!token) return "";
     const payload = verifyAccessToken(token);
-    return payload ? payload.username : "";
+    return typeof payload?.username === "string" ? payload.username.trim().toLowerCase() : "";
   } catch (err) {
     return "";
   }
