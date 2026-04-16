@@ -779,7 +779,7 @@ function HomeScreen({ photos, currentUsername, activePhotoId, likedPhotoIds, onA
                 className="relative mt-8 w-full max-w-[332px]"
               >
                 <div
-                  className="relative aspect-[4/5] overflow-hidden rounded-[2rem] shadow-2xl"
+                  className="relative aspect-[4/5] overflow-hidden rounded-[2rem]"
                   onMouseDown={() => startLongPress(photo, isActive)}
                   onMouseUp={clearLongPressTimer}
                   onMouseLeave={clearLongPressTimer}
@@ -787,10 +787,7 @@ function HomeScreen({ photos, currentUsername, activePhotoId, likedPhotoIds, onA
                   onTouchEnd={clearLongPressTimer}
                   onTouchCancel={clearLongPressTimer}
                   style={{
-                    border: isActive ? '4px solid var(--tet-gold)' : '2px solid rgba(200, 160, 90, 0.45)',
-                    boxShadow: isActive
-                      ? '0 24px 50px rgba(126, 34, 48, 0.28)'
-                      : '0 14px 32px rgba(47, 23, 21, 0.12)'
+                    border: isActive ? '4px solid var(--tet-gold)' : '2px solid rgba(200, 160, 90, 0.45)'
                   }}
                 >
                   <img src={photo.photo} alt={photo.name} className="h-full w-full object-cover" />
@@ -1134,7 +1131,7 @@ function CameraScreen({ capturedImage, onCapture, onSend, isSendingPost, friends
       </div>
 
       {/* Preview */}
-      <div className="flex-1 rounded-3xl overflow-hidden shadow-2xl mb-4" style={{ border: '3px solid var(--tet-gold)' }}>
+      <div className="flex-1 rounded-3xl overflow-hidden mb-4" style={{ border: '3px solid var(--tet-gold)' }}>
         <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
       </div>
 
@@ -1314,7 +1311,7 @@ function HistoryScreen({ photos, filter, onFilterChange, friends, selectedFriend
                 <motion.div
                   key={photo.id}
                   whileHover={{ scale: 1.05 }}
-                  className="relative aspect-square rounded-2xl overflow-hidden shadow-lg cursor-pointer"
+                  className="relative aspect-square rounded-2xl overflow-hidden cursor-pointer"
                   style={{ border: '2px solid var(--tet-gold)' }}
                 >
                   <img src={photo.photo} alt={photo.sender} className="w-full h-full object-cover" />
@@ -1602,7 +1599,7 @@ function FriendsScreen({ friends, onInvite }: any) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="relative rounded-2xl overflow-hidden shadow-lg aspect-square"
+            className="relative rounded-2xl overflow-hidden aspect-square"
             style={{ border: '2px solid var(--tet-gold)' }}
           >
             <img src={friend.photo} alt={friend.name} className="w-full h-full object-cover" />
