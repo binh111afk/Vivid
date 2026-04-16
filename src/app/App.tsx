@@ -5,8 +5,6 @@ import UserAuth from './components/UserAuth.jsx';
 import AuthPage, { useAuth } from './components/AuthPage.jsx';
 import AccountPage from './components/AccountPage.jsx';
 
-const FEED_STORAGE_KEY = 'vivid:feed-cache';
-
 // Mock data
 const friends = [
   { id: 1, name: 'Mẹ', avatar: 'https://i.pravatar.cc/150?img=1', photo: 'https://picsum.photos/400/400?random=1', online: true, timestamp: '2 phút trước', caption: 'Hoa mai nở rồi con ơi! 🌼' },
@@ -153,19 +151,7 @@ export default function App() {
   const [selectedRecipients, setSelectedRecipients] = useState<number[]>([]);
   const [caption, setCaption] = useState('');
   const [showInvitePopup, setShowInvitePopup] = useState(false);
-  const [feedPhotos, setFeedPhotos] = useState(() => {
-    if (typeof window === 'undefined') {
-      return friends;
-    }
-
-    try {
-      const raw = window.localStorage.getItem(FEED_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) && parsed.length ? parsed : friends;
-    } catch {
-      return friends;
-    }
-  });
+  const [feedPhotos, setFeedPhotos] = useState<any[]>(friends);
   const [currentHomePhotoId, setCurrentHomePhotoId] = useState(friends[0].id);
 
   const latestPhoto = feedPhotos.find((friend) => friend.id === currentHomePhotoId) ?? feedPhotos[0] ?? friends[0];
@@ -217,19 +203,37 @@ export default function App() {
     createdAt: post?.createdAt || new Date().toISOString(),
   });
 
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
+  const loadFeedFromServer = async () => {
+    if (!user?.token) {
+      return [];
     }
 
-    const persistable = feedPhotos.filter((photo: any) => Boolean(photo?.username && photo?.photo));
+    try {
+      const response = await fetch('/api/feed', {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
 
-    if (!persistable.length) {
-      return;
+      if (!response.ok) {
+        throw new Error(`Feed API error: ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const posts = Array.isArray(payload?.posts) ? payload.posts : [];
+      const mapped = posts.map(mapFeedItem).filter((item: any) => Boolean(item.photo));
+
+      if (mapped.length) {
+        setFeedPhotos(mapped);
+        setCurrentHomePhotoId(mapped[0].id);
+      }
+
+      return mapped;
+    } catch (error) {
+      console.warn('Không thể tải feed từ máy chủ.', error);
+      return [];
     }
-
-    window.localStorage.setItem(FEED_STORAGE_KEY, JSON.stringify(persistable));
-  }, [feedPhotos]);
+  };
 
   const historyPhotos = feedPhotos.map((photo: any) => {
     const createdAt = new Date(photo.createdAt || new Date().toISOString());
@@ -297,9 +301,7 @@ export default function App() {
         throw new Error((payload?.message || 'Không thể đăng ảnh lên feed.') + detail);
       }
 
-      const newFeedCard = mapFeedItem(payload?.post || {});
-      setFeedPhotos((prev) => [newFeedCard, ...prev]);
-      setCurrentHomePhotoId(newFeedCard.id);
+      await loadFeedFromServer();
       setShowNotification(true);
       setTimeout(() => setShowNotification(false), 3000);
       setCapturedImage(null);
@@ -354,15 +356,7 @@ export default function App() {
       throw new Error((payload?.message || 'Không thể xóa ảnh.') + detail);
     }
 
-    setFeedPhotos((prev) => {
-      const nextPhotos = prev.filter((item: any) => item.id !== photoId);
-
-      if (currentHomePhotoId === photoId) {
-        setCurrentHomePhotoId(nextPhotos[0]?.id ?? friends[0].id);
-      }
-
-      return nextPhotos;
-    });
+    await loadFeedFromServer();
   };
 
   useEffect(() => {
@@ -377,43 +371,7 @@ export default function App() {
   useEffect(() => {
     let ignore = false;
 
-    const loadFeed = async () => {
-      if (!user?.token) {
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/feed', {
-          headers: {
-            Authorization: `Bearer ${user.token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Feed API error: ${response.status}`);
-        }
-
-        const payload = await response.json();
-        const posts = Array.isArray(payload?.posts) ? payload.posts : [];
-
-        if (!posts.length || ignore) {
-          return;
-        }
-
-        const mapped = posts.map(mapFeedItem).filter((item: any) => Boolean(item.photo));
-
-        if (!mapped.length || ignore) {
-          return;
-        }
-
-        setFeedPhotos(mapped);
-        setCurrentHomePhotoId(mapped[0].id);
-      } catch (error) {
-        console.warn('Không thể tải feed từ máy chủ.', error);
-      }
-    };
-
-    loadFeed();
+    loadFeedFromServer();
 
     return () => {
       ignore = true;
