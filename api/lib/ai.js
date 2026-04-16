@@ -1,16 +1,46 @@
-const { OpenAIClient, AzureKeyCredential } = require("@azure/openai");
-
 const apiKey = process.env.AZURE_OPENAI_API_KEY;
 const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
 const deploymentId = process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
+const apiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-10-21";
 
-let client;
-if (apiKey && endpoint) {
-  client = new OpenAIClient(endpoint, new AzureKeyCredential(apiKey));
+function hasAzureOpenAIConfig() {
+  return Boolean(apiKey && endpoint && deploymentId);
+}
+
+function buildChatCompletionUrl() {
+  const normalizedEndpoint = String(endpoint || "").replace(/\/+$/, "");
+  return `${normalizedEndpoint}/openai/deployments/${deploymentId}/chat/completions?api-version=${apiVersion}`;
+}
+
+async function callAzureChat({ messages, maxTokens = 250, temperature = 0.7 }) {
+  if (!hasAzureOpenAIConfig()) {
+    return null;
+  }
+
+  const response = await fetch(buildChatCompletionUrl(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": apiKey,
+    },
+    body: JSON.stringify({
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Azure OpenAI error ${response.status}: ${errorText}`);
+  }
+
+  const payload = await response.json();
+  return payload?.choices?.[0]?.message?.content || null;
 }
 
 async function generateCommentForDay({ username, dateString, captions = [], photoCount = 0 }) {
-  if (!client || !deploymentId) return null;
+  if (!hasAzureOpenAIConfig()) return null;
 
   try {
     const cleanCaptions = captions
@@ -34,12 +64,13 @@ async function generateCommentForDay({ username, dateString, captions = [], phot
       },
     ];
 
-    const result = await client.getChatCompletions(deploymentId, messages, {
+    const result = await callAzureChat({
+      messages,
       temperature: 0.7,
       maxTokens: 180,
     });
 
-    return result.choices[0]?.message?.content || null;
+    return result;
   } catch (error) {
     console.error("[AI] Error generating day comment:", error);
     return null;
@@ -47,7 +78,7 @@ async function generateCommentForDay({ username, dateString, captions = [], phot
 }
 
 async function summarizePeriod({ comments = [], periodType, periodLabel }) {
-  if (!client || !deploymentId || !comments || comments.length === 0) return null;
+  if (!hasAzureOpenAIConfig() || !comments || comments.length === 0) return null;
 
   try {
     const joinedComments = comments.join("\n- ");
@@ -66,12 +97,13 @@ async function summarizePeriod({ comments = [], periodType, periodLabel }) {
       },
     ];
 
-    const result = await client.getChatCompletions(deploymentId, messages, {
+    const result = await callAzureChat({
+      messages,
       temperature: 0.7,
       maxTokens: 250,
     });
 
-    return result.choices[0]?.message?.content || null;
+    return result;
   } catch (error) {
     console.error(`[AI] Error generating ${periodType} comment:`, error);
     return null;
