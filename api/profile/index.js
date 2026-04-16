@@ -17,11 +17,17 @@ function createLogger(context) {
 
 function sendResponse(target, status, body) {
   if (target?.res && typeof target.res.status === "function") {
+    if (typeof target.res.setHeader === "function") {
+      target.res.setHeader("Cache-Control", "no-store");
+    }
     return target.res.status(status).json(body);
   }
 
   target.context.res = {
     status,
+    headers: {
+      "Cache-Control": "no-store",
+    },
     body,
   };
   return target.context.res;

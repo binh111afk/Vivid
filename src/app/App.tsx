@@ -209,7 +209,7 @@ export default function App() {
     }
 
     try {
-      const response = await fetch('/api/feed', {
+      const response = await fetch(`/api/feed?t=${Date.now()}`, {
         headers: {
           Authorization: `Bearer ${user.token}`,
         },
