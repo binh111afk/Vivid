@@ -65,6 +65,7 @@ async function handleGetSummaries(target) {
     console.error("[Summaries] Error while fetching summaries", error);
     return sendResponse(target, 500, {
       message: "Không thể lấy danh sách tổng kết.",
+      detail: error.message || error.toString() // Debug info
     });
   }
 }
