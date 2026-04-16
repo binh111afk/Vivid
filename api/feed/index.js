@@ -130,10 +130,10 @@ async function handleGetFeed(target) {
     await connectToDatabase();
 
     const posts = await FeedPost.find({})
-      .sort({ _id: -1 })
-      .limit(100)
-      .lean();
-
+        .limit(100)
+        .lean();
+      
+      posts.sort((a,b) => b._id.toString().localeCompare(a._id.toString()));
     return sendResponse(target, 200, {
       posts: posts.map((post) => ({
         id: post.feedId,
@@ -162,11 +162,10 @@ async function handleAIBackgroundTasks(username, caption, logger) {
 
     const recentPosts = await FeedPost.find({ username })
       .select({ caption: 1, createdAt: 1 })
-      .sort({ _id: -1 })
-      .limit(500)
-      .lean();
-
-    const todayPosts = recentPosts.filter((post) => {
+        .limit(500)
+        .lean();
+      
+      recentPosts.sort((a,b) => b._id.toString().localeCompare(a._id.toString()));
       const postZonedDate = getZonedDate(new Date(post.createdAt));
       return toDateKey(postZonedDate) === dayKey;
     });
@@ -199,13 +198,9 @@ async function handleAIBackgroundTasks(username, caption, logger) {
         type: "day",
         dateString: { $in: weekDayKeys },
       })
-        .sort({ dateString: 1 })
-        .lean();
-
-      const weekComments = daySummaries.map((item) => item.content).filter(Boolean);
-      if (weekComments.length > 0) {
-        const weekSummary = await summarizePeriod({
-          comments: weekComments,
+          .lean();
+        
+        daySummaries.sort((a,b) => a.dateString.localeCompare(b.dateString));
           periodType: "week",
           periodLabel: weekKey,
         });
@@ -228,13 +223,9 @@ async function handleAIBackgroundTasks(username, caption, logger) {
         type: "day",
         dateString: { $regex: `^${monthKey}-` },
       })
-        .sort({ dateString: 1 })
-        .lean();
-
-      const monthComments = daySummaries.map((item) => item.content).filter(Boolean);
-      if (monthComments.length > 0) {
-        const monthSummary = await summarizePeriod({
-          comments: monthComments,
+          .lean();
+          
+        daySummaries.sort((a,b) => a.dateString.localeCompare(b.dateString));
           periodType: "month",
           periodLabel: monthKey,
         });

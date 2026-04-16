@@ -44,10 +44,11 @@ async function handleGetSummaries(target) {
 
     await connectToDatabase();
     
-    // Fetch user's summaries
+    // Fetch user's summaries (removed index-dependent sort, use client-side or implicit sort)
     const summaries = await Summary.find({ username: authUsername })
-      .sort({ createdAt: -1 })
       .lean();
+
+    summaries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // Map to frontend expected shape if possible or just send raw
     return sendResponse(target, 200, {
