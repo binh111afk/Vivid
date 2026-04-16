@@ -34,11 +34,10 @@ function getAuthenticatedUsername(req) {
   }
 }
 
-module.exports = async function (context, req) {
-  const target = { context, req };
+async function handleGetSummaries(target) {
 
   try {
-    const authUsername = getAuthenticatedUsername(req);
+    const authUsername = getAuthenticatedUsername(target.req);
     if (!authUsername) {
       return sendResponse(target, 401, { message: "Thiếu hoặc sai token xác thực." });
     }
@@ -68,4 +67,28 @@ module.exports = async function (context, req) {
       message: "Không thể lấy danh sách tổng kết.",
     });
   }
+}
+
+module.exports = async function summariesHandler(arg1, arg2) {
+  const isVercelRuntime = Boolean(arg2 && typeof arg2.status === "function");
+
+  if (isVercelRuntime) {
+    const req = arg1;
+    const res = arg2;
+
+    if (req.method !== "GET") {
+      return res.status(405).json({ message: "Method not allowed" });
+    }
+
+    return handleGetSummaries({
+      context: null,
+      req,
+      res,
+    });
+  }
+
+  return handleGetSummaries({
+    context: arg1,
+    req: arg2,
+  });
 };
