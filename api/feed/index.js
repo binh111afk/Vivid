@@ -173,20 +173,24 @@ async function handleAIBackgroundTasks(username, caption, logger) {
       return toDateKey(postZonedDate) === dayKey;
     });
 
+    const latestPost = todayPostsFromRecent[0];
+    const uniqueDateString = latestPost && latestPost._id ? `${dayKey}_${latestPost._id}` : `${dayKey}_${Date.now()}`;
+
     const daySummary = await generateCommentForDay({
       username,
       dateString: dayKey,
-      posts: todayPostsFromRecent,
-      photoCount: todayPostsFromRecent.length,
+      posts: latestPost ? [latestPost] : [],
+      photoCount: latestPost ? 1 : 0,
     });
 
-    if (daySummary) {
-      await Summary.findOneAndUpdate(
-        { username, type: "day", dateString: dayKey },
-        { $set: { content: daySummary } },
-        { upsert: true, new: true },
-      );
-      logger.info("[AI] Upserted day summary", { username, dayKey, photoCount: todayPostsFromRecent.length });
+    if (daySummary && latestPost) {
+      await Summary.create({
+        username,
+        type: "day",
+        dateString: uniqueDateString,
+        content: daySummary,
+      });
+      logger.info("[AI] Created separate day summary for post", { username, uniqueDateString });
     }
 
     if (isEndOfWeek(nowZoned)) {
@@ -195,7 +199,7 @@ async function handleAIBackgroundTasks(username, caption, logger) {
       const daySummaries = await Summary.find({
         username,
         type: "day",
-        dateString: { $in: weekDayKeys },
+        dateString: { $regex: new RegExp(`^(${weekDayKeys.join("|")})`) },
       })
         
         .lean();

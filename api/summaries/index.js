@@ -55,7 +55,7 @@ async function handleGetSummaries(target) {
       summaries: summaries.map(s => ({
         id: s._id,
         type: s.type, // 'day', 'week', 'month'
-        dateString: s.dateString,
+        dateString: s.type === "day" && s.dateString.includes("_") ? s.dateString.split("_")[0] : s.dateString,
         text: s.content,
         username: s.username,
         createdAt: s.createdAt,
