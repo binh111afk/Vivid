@@ -162,26 +162,22 @@ async function handleAIBackgroundTasks(username, caption, logger) {
     const dayKey = toDateKey(nowZoned);
 
     const recentPosts = await FeedPost.find({ username })
-      .select({ caption: 1, createdAt: 1 })
+      .select({ caption: 1, createdAt: 1, photo: 1 })
       
       .limit(500)
       .lean();
       recentPosts.sort((a,b)=>b._id.toString().localeCompare(a._id.toString()));
 
-    const todayPosts = recentPosts.filter((post) => {
+    const todayPostsFromRecent = recentPosts.filter((post) => {
       const postZonedDate = getZonedDate(new Date(post.createdAt));
       return toDateKey(postZonedDate) === dayKey;
     });
 
-    const todayCaptions = todayPosts
-      .map((post) => (typeof post.caption === "string" ? post.caption.trim() : ""))
-      .filter(Boolean);
-
     const daySummary = await generateCommentForDay({
       username,
       dateString: dayKey,
-      captions: todayCaptions,
-      photoCount: todayPosts.length,
+      posts: todayPostsFromRecent,
+      photoCount: todayPostsFromRecent.length,
     });
 
     if (daySummary) {
@@ -190,7 +186,7 @@ async function handleAIBackgroundTasks(username, caption, logger) {
         { $set: { content: daySummary } },
         { upsert: true, new: true },
       );
-      logger.info("[AI] Upserted day summary", { username, dayKey, photoCount: todayPosts.length });
+      logger.info("[AI] Upserted day summary", { username, dayKey, photoCount: todayPostsFromRecent.length });
     }
 
     if (isEndOfWeek(nowZoned)) {
