@@ -99,6 +99,72 @@ export default function App() {
   const [isLoadingSummaries, setIsLoadingSummaries] = useState(false);
   const [currentHomePhotoId, setCurrentHomePhotoId] = useState(friends[0].id);
 
+  // Friends & Notifications
+  const [friendsList, setFriendsList] = useState<any[]>(friends);
+  const [friendRequests, setFriendRequests] = useState<any[]>([]);
+  const [showFriendRequestNotification, setShowFriendRequestNotification] = useState(false);
+  const [newRequestUser, setNewRequestUser] = useState<string>('');
+
+  const friendRequestsRef = useRef<any[]>([]);
+  useEffect(() => {
+    friendRequestsRef.current = friendRequests;
+  }, [friendRequests]);
+
+  const loadFriendsFromServer = async () => {
+    if (!user?.token) return [];
+    try {
+      const response = await fetch(`/api/friends?t=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const incomingRequests = data.friendRequests || [];
+        
+        // Notify if there is a new request
+        const prevReqs = friendRequestsRef.current;
+        if (incomingRequests.length > prevReqs.length) {
+          const newReq = incomingRequests.find((r: any) => !prevReqs.some((p: any) => p.id === r.id));
+          if (newReq) {
+            setNewRequestUser(newReq.name);
+            setShowFriendRequestNotification(true);
+            setTimeout(() => setShowFriendRequestNotification(false), 5000);
+          }
+        }
+
+        setFriendsList(data.friends || []);
+        setFriendRequests(incomingRequests);
+      }
+    } catch (e) {}
+  };
+
+  const acceptFriend = async (username: string) => {
+    try {
+      const res = await fetch('/api/friends', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ senderUsername: username })
+      });
+      if (res.ok) loadFriendsFromServer();
+    } catch (e) {}
+  };
+
+  const rejectFriend = async (username: string) => {
+    try {
+      const res = await fetch('/api/friends', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ targetUsername: username })
+      });
+      if (res.ok) loadFriendsFromServer();
+    } catch (e) {}
+  };
+
   const latestPhoto = feedPhotos.find((friend) => friend.id === currentHomePhotoId) ?? feedPhotos[0] ?? friends[0];
   const deviceFrameStyle = {
     background: 'var(--tet-cream)',
@@ -398,8 +464,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!user?.token) return;
     loadFeedFromServer();
     loadSummariesFromServer();
+    loadFriendsFromServer();
+
+    const interval = setInterval(() => {
+      loadFriendsFromServer();
+    }, 10000); // Check every 10s for new requests
 
     const urlParams = new URLSearchParams(window.location.search);
     const inviteUsername = urlParams.get('invite');
@@ -417,9 +489,12 @@ export default function App() {
         alert(data.message || 'Đã gửi lời mời kết bạn.');
         const newUrl = window.location.pathname;
         window.history.replaceState({}, document.title, newUrl);
+        loadFriendsFromServer();
       })
       .catch(console.error);
     }
+    
+    return () => clearInterval(interval);
   }, [user?.token, user?.username]);
 
   useEffect(() => {
@@ -534,7 +609,13 @@ export default function App() {
                     exit={{ opacity: 0, x: -20 }}
                     className="h-full"
                   >
-                    <FriendsScreen friends={friends} onInvite={() => setShowInvitePopup(true)} />
+                    <FriendsScreen 
+                      friends={friendsList.length > 0 ? friendsList : friends}
+                      friendRequests={friendRequests}
+                      onInvite={() => setShowInvitePopup(true)} 
+                      onAccept={(username: string) => acceptFriend(username)}
+                      onReject={(username: string) => rejectFriend(username)}
+                    />
                   </motion.div>
                 )}
                 {activeTab === 'account' && (
@@ -600,6 +681,24 @@ export default function App() {
               }}
             >
               <p className="text-center font-medium">{latestPhoto.name} vừa gửi ảnh cho bạn! 📸</p>
+            </motion.div>
+          )}
+
+          {showFriendRequestNotification && (
+            <motion.div
+              initial={{ opacity: 0, y: -100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -100 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="fixed left-1/2 top-20 z-50 max-w-[calc(100vw-1rem)] -translate-x-1/2 rounded-full px-4 py-3 shadow-2xl sm:top-24 sm:px-6 sm:py-4"
+              style={{
+                background: 'var(--tet-cream)',
+                border: '2px solid var(--tet-gold)',
+                color: 'var(--tet-red)',
+                maxWidth: '90%'
+              }}
+            >
+              <p className="text-center font-medium">Bạn có lời mời kết bạn mới từ {newRequestUser} ✨</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1677,12 +1776,53 @@ function InvitePopup({ onClose, currentUser }: any) {
   );
 }
 
-function FriendsScreen({ friends, onInvite }: any) {
+function FriendsScreen({ friends, friendRequests = [], onInvite, onAccept, onReject }: any) {
   return (
     <div className="h-full overflow-y-auto px-6 py-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
       <h2 className="mb-6 text-2xl" style={{ fontFamily: 'var(--font-display)', color: 'var(--tet-red)' }}>
         Bạn bè của bạn
       </h2>
+
+      {friendRequests.length > 0 && (
+        <div className="mb-8">
+          <h3 className="mb-4 text-lg font-medium" style={{ color: 'var(--tet-red)' }}>Lời mời kết bạn</h3>
+          <div className="space-y-3">
+            {friendRequests.map((req: any, index: number) => (
+              <motion.div 
+                key={req.id} 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="flex items-center justify-between p-3 rounded-2xl shadow-sm" 
+                style={{ border: '2px solid var(--tet-gold)', background: 'white' }}
+              >
+                <div className="flex items-center gap-3">
+                  <img src={req.avatar} alt={req.name} className="w-12 h-12 rounded-full object-cover" style={{ border: '2px solid var(--tet-gold)' }} />
+                  <p className="font-medium text-sm" style={{ color: 'var(--tet-black)' }}>{req.name}</p>
+                </div>
+                <div className="flex gap-2">
+                  <motion.button 
+                    onClick={() => onAccept(req.username)} 
+                    whileTap={{ scale: 0.9 }}
+                    className="px-4 py-2 rounded-full text-xs font-semibold shadow-sm" 
+                    style={{ background: 'var(--tet-red)', color: 'var(--tet-cream)', border: '1px solid var(--tet-gold)' }}
+                  >
+                    Chấp nhận
+                  </motion.button>
+                  <motion.button 
+                    onClick={() => onReject(req.username)} 
+                    whileTap={{ scale: 0.9 }}
+                    className="px-4 py-2 rounded-full text-xs font-semibold shadow-sm" 
+                    style={{ background: 'white', color: 'var(--tet-red)', border: '1px solid var(--tet-red)' }}
+                  >
+                    Từ chối
+                  </motion.button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 mb-6">
         {friends.map((friend: any, index: number) => (
