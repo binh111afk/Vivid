@@ -100,7 +100,7 @@ export default function App() {
   const [currentHomePhotoId, setCurrentHomePhotoId] = useState(friends[0].id);
 
   // Friends & Notifications
-  const [friendsList, setFriendsList] = useState<any[]>(friends);
+  const [friendsList, setFriendsList] = useState<any[]>([]);
   const [friendRequests, setFriendRequests] = useState<any[]>([]);
   const [showFriendRequestNotification, setShowFriendRequestNotification] = useState(false);
   const [newRequestUser, setNewRequestUser] = useState<any>(null);
@@ -132,19 +132,8 @@ export default function App() {
         }
 
         const apiFriends = data.friends || [];
-        const enrichedFriends = apiFriends.map((f: any) => {
-          // Find the latest photo of this friend in feed photos (if available)
-          const friendPost = feedPhotos.find(p => p.username === f.username);
-          return {
-            ...f,
-            photo: friendPost?.photo || `https://picsum.photos/400/400?random=${f.username}`,
-            caption: friendPost?.caption || '',
-            timestamp: friendPost?.timestamp || 'Mới đây',
-            online: true
-          };
-        });
-
-        setFriendsList(enrichedFriends);
+        // Gắn danh sách bạn bè về vào state, sau đó component lúc render sẽ tự map với feedPhotos
+        setFriendsList(apiFriends);
         setFriendRequests(incomingRequests);
       }
     } catch (e) {}
@@ -623,7 +612,19 @@ export default function App() {
                     className="h-full"
                   >
                     <FriendsScreen 
-                      friends={friendsList.length > 0 ? friendsList : friends}
+                      friends={
+                        (friendsList || []).map((f: any) => {
+                          const fPhotos = feedPhotos.filter((p: any) => p.username === f.username);
+                          const fPost = fPhotos.length > 0 ? fPhotos[0] : null;
+                          return {
+                            ...f,
+                            photo: fPost?.photo || '',
+                            caption: fPost?.caption || '',
+                            timestamp: fPost?.timestamp || 'Chưa đăng',
+                            online: true
+                          };
+                        })
+                      }
                       friendRequests={friendRequests}
                       onInvite={() => setShowInvitePopup(true)} 
                       onAccept={(username: string) => acceptFriend(username)}
@@ -1861,17 +1862,33 @@ function FriendsScreen({ friends, friendRequests = [], onInvite, onAccept, onRej
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {friends.map((friend: any, index: number) => (
-          <motion.div
-            key={friend.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+      {friends.length === 0 ? (
+        <div className="mb-6 py-12 px-4 shadow-sm rounded-3xl text-center flex flex-col items-center" style={{ background: 'white', border: '2px dashed var(--tet-gold)' }}>
+          <div className="w-16 h-16 rounded-full mb-4 flex items-center justify-center" style={{ background: 'var(--tet-cream)', color: 'var(--tet-red)' }}>
+            <Users size={32} />
+          </div>
+          <p className="font-medium text-lg mb-2" style={{ color: 'var(--tet-red)' }}>Chưa có bạn bè nào</p>
+          <p className="text-sm opacity-70" style={{ color: 'var(--tet-black)' }}>Hãy mời bạn bè hoặc quét mã của nhau để bắt đầu chia sẻ khoảnh khắc nhé!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {friends.map((friend: any, index: number) => (
+            <motion.div
+              key={friend.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
             className="relative rounded-2xl overflow-hidden aspect-square"
-            style={{ border: '2px solid var(--tet-gold)' }}
+            style={{ border: '2px solid var(--tet-gold)', background: 'var(--tet-cream)' }}
           >
-            <img src={friend.photo} alt={friend.name} className="w-full h-full object-cover" />
+            {friend.photo ? (
+              <img src={friend.photo} alt={friend.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center opacity-60">
+                <Camera size={32} className="mb-2" style={{ color: 'var(--tet-red)' }} />
+                <span className="text-xs font-medium" style={{ color: 'var(--tet-red)' }}>Chưa có bài đăng</span>
+              </div>
+            )}
 
             {/* Caption overlay */}
             {friend.caption && (
@@ -1907,6 +1924,7 @@ function FriendsScreen({ friends, friendRequests = [], onInvite, onAccept, onRej
           </motion.div>
         ))}
       </div>
+      )}
 
       {/* Add friend button */}
       <motion.button
