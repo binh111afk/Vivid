@@ -103,7 +103,7 @@ export default function App() {
   const [friendsList, setFriendsList] = useState<any[]>(friends);
   const [friendRequests, setFriendRequests] = useState<any[]>([]);
   const [showFriendRequestNotification, setShowFriendRequestNotification] = useState(false);
-  const [newRequestUser, setNewRequestUser] = useState<string>('');
+  const [newRequestUser, setNewRequestUser] = useState<any>(null);
 
   const friendRequestsRef = useRef<any[]>([]);
   useEffect(() => {
@@ -125,7 +125,7 @@ export default function App() {
         if (incomingRequests.length > prevReqs.length) {
           const newReq = incomingRequests.find((r: any) => !prevReqs.some((p: any) => p.id === r.id));
           if (newReq) {
-            setNewRequestUser(newReq.name);
+            setNewRequestUser({ name: newReq.name, avatar: newReq.avatar });
             setShowFriendRequestNotification(true);
             setTimeout(() => setShowFriendRequestNotification(false), 5000);
           }
@@ -697,21 +697,21 @@ export default function App() {
             </motion.div>
           )}
 
-          {showFriendRequestNotification && (
+          {showFriendRequestNotification && newRequestUser && (
             <motion.div
               initial={{ opacity: 0, y: -100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -100 }}
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              className="fixed left-1/2 top-20 z-50 max-w-[calc(100vw-1rem)] -translate-x-1/2 rounded-full px-4 py-3 shadow-2xl sm:top-24 sm:px-6 sm:py-4"
+              className="fixed left-1/2 top-20 z-50 flex items-center gap-3 max-w-[calc(100vw-1rem)] w-max -translate-x-1/2 rounded-full px-4 py-3 shadow-2xl sm:top-24 sm:px-6 sm:py-3"
               style={{
                 background: 'var(--tet-cream)',
                 border: '2px solid var(--tet-gold)',
                 color: 'var(--tet-red)',
-                maxWidth: '90%'
               }}
             >
-              <p className="text-center font-medium">Bạn có lời mời kết bạn mới từ {newRequestUser} ✨</p>
+              <img src={newRequestUser.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover" style={{ border: '2px solid var(--tet-gold)' }} />
+              <p className="font-medium text-sm sm:text-base">Bạn có lời mời mới từ {newRequestUser.name} ✨</p>
             </motion.div>
           )}
         </AnimatePresence>
