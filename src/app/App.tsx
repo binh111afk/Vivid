@@ -401,7 +401,26 @@ export default function App() {
     loadFeedFromServer();
     loadSummariesFromServer();
 
-  }, [user?.token]);
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteUsername = urlParams.get('invite');
+    if (inviteUsername && user?.token && inviteUsername !== user?.username) {
+      fetch('/api/friends', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ targetUsername: inviteUsername })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || 'Đã gửi lời mời kết bạn.');
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+      })
+      .catch(console.error);
+    }
+  }, [user?.token, user?.username]);
 
   useEffect(() => {
     const validNames = new Set(['Bạn', ...historyFriends.map((friend: any) => friend.name)]);
@@ -645,7 +664,7 @@ export default function App() {
                   border: '3px solid var(--tet-gold)'
                 }}
               >
-                <InvitePopup onClose={() => setShowInvitePopup(false)} />
+                <InvitePopup onClose={() => setShowInvitePopup(false)} currentUser={user} />
               </motion.div>
             </motion.div>
           )}
@@ -1586,9 +1605,9 @@ function ViewButton({ label, active, onClick }: any) {
   );
 }
 
-function InvitePopup({ onClose }: any) {
+function InvitePopup({ onClose, currentUser }: any) {
   const [copied, setCopied] = useState(false);
-  const inviteLink = 'https://vivid.app/invite/abc123xyz';
+  const inviteLink = `${window.location.origin}/?invite=${currentUser?.username || ''}`;
 
   const handleCopy = async () => {
     try {
