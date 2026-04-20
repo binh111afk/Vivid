@@ -115,16 +115,26 @@ async function handleFriendsAPI(target) {
 
       // Check if targetUser already sent us a request, in which case we accept it.
       if (user.friendRequests.some(r => r._id.toString() === targetUser._id.toString())) {
-        user.friendRequests = user.friendRequests.filter(r => r._id.toString() !== targetUser._id.toString());
-        user.friends.push(targetUser._id);
-        targetUser.friends.push(user._id);
-        await user.save();
-        await targetUser.save();
+        await User.updateOne(
+          { _id: user._id },
+          { 
+            $pull: { friendRequests: targetUser._id },
+            $addToSet: { friends: targetUser._id }
+          }
+        );
+        await User.updateOne(
+          { _id: targetUser._id },
+          { 
+            $addToSet: { friends: user._id }
+          }
+        );
         return sendResponse(target, 200, { message: "Đã chấp nhận lời mời kết bạn do người này đã gửi lời mời cho bạn." });
       }
 
-      targetUser.friendRequests.push(user._id);
-      await targetUser.save();
+      await User.updateOne(
+        { _id: targetUser._id },
+        { $addToSet: { friendRequests: user._id } }
+      );
 
       return sendResponse(target, 200, { message: "Đã gửi lời mời kết bạn thành công." });
     }
@@ -143,20 +153,20 @@ async function handleFriendsAPI(target) {
         return sendResponse(target, 400, { message: "Không có lời mời kết bạn nào từ người này." });
       }
 
-      user.friendRequests = user.friendRequests.filter(r => r._id.toString() !== senderIdStr);
+      await User.updateOne(
+        { _id: user._id },
+        { 
+          $pull: { friendRequests: sender._id },
+          $addToSet: { friends: sender._id }
+        }
+      );
       
-      const userFriendsStr = user.friends.map(f => f._id.toString());
-      if (!userFriendsStr.includes(senderIdStr)) {
-        user.friends.push(sender._id);
-      }
-
-      const senderFriendsStr = sender.friends.map(id => id.toString());
-      if (!senderFriendsStr.includes(user._id.toString())) {
-        sender.friends.push(user._id);
-      }
-
-      await user.save();
-      await sender.save();
+      await User.updateOne(
+        { _id: sender._id },
+        { 
+          $addToSet: { friends: user._id }
+        }
+      );
 
       return sendResponse(target, 200, { message: "Đã chấp nhận lời mời kết bạn." });
     }
@@ -170,17 +180,19 @@ async function handleFriendsAPI(target) {
         return sendResponse(target, 404, { message: "Không tìm thấy người dùng." });
       }
 
-      const targetIdStr = targetUser._id.toString();
+      await User.updateOne(
+        { _id: user._id },
+        { 
+          $pull: { friendRequests: targetUser._id, friends: targetUser._id }
+        }
+      );
       
-      // Remove from friend requests and friends
-      user.friendRequests = user.friendRequests.filter(r => r._id.toString() !== targetIdStr);
-      user.friends = user.friends.filter(f => f._id.toString() !== targetIdStr);
-      
-      targetUser.friendRequests = targetUser.friendRequests.filter(id => id.toString() !== user._id.toString());
-      targetUser.friends = targetUser.friends.filter(id => id.toString() !== user._id.toString());
-
-      await user.save();
-      await targetUser.save();
+      await User.updateOne(
+        { _id: targetUser._id },
+        { 
+          $pull: { friendRequests: user._id, friends: user._id }
+        }
+      );
 
       return sendResponse(target, 200, { message: "Đã xóa thành công." });
     }

@@ -248,8 +248,8 @@ export default function App() {
       const posts = Array.isArray(payload?.posts) ? payload.posts : [];
       const mapped = posts.map(mapFeedItem).filter((item: any) => Boolean(item.photo));
 
-      if (mapped.length) {
-        setFeedPhotos(mapped);
+      setFeedPhotos(mapped); // ALWAYS set, even if empty
+      if (mapped.length > 0) {
         setCurrentHomePhotoId(mapped[0].id);
       }
 
@@ -791,8 +791,32 @@ function HomeScreen({ photos, currentUsername, activePhotoId, likedPhotoIds, onA
   const longPressTimerRef = useRef<number | null>(null);
   const [deletePromptPhotoId, setDeletePromptPhotoId] = useState<number | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<number | null>(null);
+
+  if (!photos || photos.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-24 h-24 mb-6 rounded-full flex items-center justify-center" style={{ background: 'var(--tet-cream)', border: '2px solid var(--tet-gold)' }}>
+          <Camera size={40} style={{ color: 'var(--tet-red)' }} />
+        </div>
+        <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--tet-red)' }}>Chưa có bài đăng nào</h3>
+        <p className="mb-8" style={{ color: 'var(--tet-black)', opacity: 0.7 }}>
+          Hãy kết nối với bạn bè hoặc trở thành người đầu tiên chia sẻ khoảnh khắc với người thân nhé!
+        </p>
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={onCameraClick}
+          className="rounded-full px-8 py-4 flex items-center justify-center gap-2 shadow-xl"
+          style={{ background: 'var(--tet-red)', color: 'var(--tet-cream)', border: '2px solid var(--tet-gold)' }}
+        >
+          <Camera size={20} />
+          <span className="font-semibold">Chụp ảnh ngay</span>
+        </motion.button>
+      </div>
+    );
+  }
+
   const activePhoto = photos.find((item: any) => item.id === activePhotoId) ?? photos[0];
-  const liked = likedPhotoIds.includes(activePhoto.id);
+  const liked = likedPhotoIds.includes(activePhoto?.id);
   const actionBoxHeight = 92;
   const actionBoxBottomOffset = 30;
   const cardToActionGap = -34;
