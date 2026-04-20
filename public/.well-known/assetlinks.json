@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.example.vivid",
+    "sha256_cert_fingerprints": [
+      "DF:81:92:B6:E7:73:EC:2A:62:56:E0:11:FD:4D:71:EA:DA:76:C2:8D:B8:AD:4E:54:98:41:4F:AE:4E:62:90:B3"
+    ]
+  }
+}]
