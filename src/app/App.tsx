@@ -131,7 +131,20 @@ export default function App() {
           }
         }
 
-        setFriendsList(data.friends || []);
+        const apiFriends = data.friends || [];
+        const enrichedFriends = apiFriends.map((f: any) => {
+          // Find the latest photo of this friend in feed photos (if available)
+          const friendPost = feedPhotos.find(p => p.username === f.username);
+          return {
+            ...f,
+            photo: friendPost?.photo || `https://picsum.photos/400/400?random=${f.username}`,
+            caption: friendPost?.caption || '',
+            timestamp: friendPost?.timestamp || 'Mới đây',
+            online: true
+          };
+        });
+
+        setFriendsList(enrichedFriends);
         setFriendRequests(incomingRequests);
       }
     } catch (e) {}

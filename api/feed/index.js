@@ -129,7 +129,15 @@ async function handleGetFeed(target) {
 
     await connectToDatabase();
 
-    const posts = await FeedPost.find({})
+    const currentUser = await User.findOne({ username: authUsername }).populate("friends").lean();
+    if (!currentUser) {
+      return sendResponse(target, 404, { message: "Không tìm thấy người dùng." });
+    }
+
+    const friendUsernames = (currentUser.friends || []).map(f => f.username);
+    const visibleUsernames = [authUsername, ...friendUsernames];
+
+    const posts = await FeedPost.find({ username: { $in: visibleUsernames } })
       
       .limit(100)
       .lean();
